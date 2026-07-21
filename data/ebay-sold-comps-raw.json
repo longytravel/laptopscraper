@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-05-02T20:30:28.295Z",
+  "rawRuns": [
+    {
+      "searchTerm": "Canon EF 50mm f/1.8 STM",
+      "ok": false,
+      "status": 403,
+      "error": {
+        "errors": [
+          {
+            "errorId": 1100,
+            "domain": "ACCESS",
+            "category": "REQUEST",
+            "message": "Access denied",
+            "longMessage": "Insufficient permissions to fulfill the request."
+          }
+        ]
+      }
+    }
+  ]
+}

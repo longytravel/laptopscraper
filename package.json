@@ -1,0 +1,45 @@
+{
+  "name": "resale-arbitrage",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "collect:ebay": "node scripts/collect-ebay.mjs",
+    "collect:sold": "node scripts/collect-ebay-sold.mjs",
+    "import:sold": "node scripts/import-sold-comps.mjs",
+    "import:terapeak-paste": "node scripts/import-terapeak-paste.mjs",
+    "enrich:ebay": "node scripts/enrich-ebay-details.mjs",
+    "pack:lens": "node scripts/create-lens-pack.mjs",
+    "compact:lens": "node scripts/compact-lens-pack.mjs",
+    "assess:lens-mini": "node scripts/assess-lens-mini.mjs",
+    "sync:assessments": "node scripts/sync-assessments.mjs",
+    "assess:family-local": "node scripts/assess-family-local.mjs",
+    "assess:listings": "node scripts/assess-listings.mjs",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "lucide-react": "^1.14.0",
+    "openai": "^6.35.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "yaml": "^2.8.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10"
+  }
+}
