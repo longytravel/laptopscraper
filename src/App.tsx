@@ -26,12 +26,13 @@ import {
   buildChartModel,
   deriveFacets,
   parseShortlist,
+  partitionResults,
   rankListings,
   serializeShortlist,
   SHORTLIST_STORAGE_KEY,
   toggleSelection,
 } from './laptop/dashboard'
-import { applyFilters, createDefaultFilters } from './laptop/engine'
+import { createDefaultFilters } from './laptop/engine'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
@@ -42,6 +43,7 @@ const NUMBER = new Intl.NumberFormat('en-GB')
 type SetFilterKey = 'allowedConditions' | 'allowedBrands' | 'allowedCpuManufacturers' | 'allowedGpuFamilies' | 'allowedBuyingOptions' | 'allowedConfidence' | 'excludedRisks'
 type ResultMode = 'matches' | 'needs-checking' | 'shortlist'
 type SortMode = 'recommended' | 'value' | 'power' | 'price'
+const RESULT_MODES: ResultMode[] = ['matches', 'needs-checking', 'shortlist']
 
 function ageLabel(value: string): string {
   const milliseconds = Date.now() - new Date(value).getTime()
@@ -243,7 +245,7 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
         {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}
       </div>
       <div className="listing-metrics">
-        <div><span>Delivered</span><strong>{MONEY.format(row.deliveredPrice)}</strong>{row.shippingPrice > 0 && <small>includes {MONEY.format(row.shippingPrice)} postage</small>}</div>
+        <div><span>Delivered</span><strong>{row.deliveredPrice == null ? '—' : MONEY.format(row.deliveredPrice)}</strong>{row.shippingPrice == null ? <small>postage unknown</small> : row.shippingPrice > 0 ? <small>includes {MONEY.format(row.shippingPrice)} postage</small> : <small>free postage quoted</small>}</div>
         <div className="power-number"><span>Power</span><strong>{row.combinedPower ?? '—'}</strong><small>CPU {row.cpuPower ?? '—'} · GPU {row.gpuPower ?? '—'}</small></div>
         <div><span>Value / £1k</span><strong>{row.valueIndex ?? '—'}</strong><small>recommendation {row.recommendationScore}/100</small></div>
       </div>
@@ -254,6 +256,34 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
         <a className="ebay-button" href={row.listingUrl} target="_blank" rel="noreferrer">eBay <ExternalLink size={15} /></a>
       </div>
     </article>
+  )
+}
+
+function ShortlistComparison({ rows, onRemove }: { rows: LaptopListing[]; onRemove: (id: string) => void }) {
+  const visible = rows.slice(0, 6)
+  const values: Array<[string, (row: LaptopListing) => React.ReactNode]> = [
+    ['Delivered', (row) => row.deliveredPrice == null ? 'Unknown' : MONEY.format(row.deliveredPrice)],
+    ['Overall power', (row) => row.combinedPower ?? '—'],
+    ['CPU / GPU', (row) => `${row.cpuPower ?? '—'} / ${row.gpuPower ?? '—'}`],
+    ['CPU', (row) => row.cpuModel ?? 'Unknown'],
+    ['GPU', (row) => row.gpuModel ?? 'Unknown'],
+    ['RAM / storage', (row) => `${row.ramGb ?? '—'} GB / ${row.storageGb ?? '—'} GB`],
+    ['Seller', (row) => row.sellerFeedbackPercent == null ? 'Unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`],
+    ['Returns', (row) => row.returnsAccepted === true ? 'Accepted' : row.returnsAccepted === false ? 'Not accepted' : 'Unknown'],
+    ['Confidence', (row) => row.specConfidence],
+    ['Risks', (row) => row.riskFlags.length ? row.riskFlags.join(', ') : 'None detected'],
+  ]
+  return (
+    <div className="comparison-wrap">
+      {rows.length > visible.length && <p>Showing the first {visible.length} of {rows.length} saved machines.</p>}
+      <table className="comparison-table">
+        <thead><tr><th scope="col">Metric</th>{visible.map((row) => <th scope="col" key={row.id}><span>{row.title}</span><button type="button" onClick={() => onRemove(row.id)}>Remove</button></th>)}</tr></thead>
+        <tbody>
+          {values.map(([label, render]) => <tr key={label}><th scope="row">{label}</th>{visible.map((row) => <td key={row.id}>{render(row)}</td>)}</tr>)}
+          <tr><th scope="row">Listing</th>{visible.map((row) => <td key={row.id}><a href={row.listingUrl} target="_blank" rel="noreferrer">Open on eBay <ExternalLink size={13} /></a></td>)}</tr>
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -287,17 +317,14 @@ function App() {
   }, [shortlist])
 
   const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
-  const filtered = useMemo(() => {
-    const rows = applyFilters(dataset?.listings ?? [], filters)
-    const normalizedQuery = query.trim().toLowerCase()
-    return normalizedQuery ? rows.filter((row) => `${row.title} ${row.cpuModel ?? ''} ${row.gpuModel ?? ''} ${row.brand ?? ''}`.toLowerCase().includes(normalizedQuery)) : rows
-  }, [dataset, filters, query])
-  const scoredMatches = useMemo(() => filtered.filter((row) => row.combinedPower != null), [filtered])
-  const needsChecking = useMemo(() => (dataset?.listings ?? []).filter((row) => row.combinedPower == null && !row.hardExcluded && row.deliveredPrice >= filters.minPrice && row.deliveredPrice <= filters.maxPrice), [dataset, filters.minPrice, filters.maxPrice])
+  const groups = useMemo(() => partitionResults(dataset?.listings ?? [], filters, query), [dataset, filters, query])
+  const filtered = groups.matches
+  const scoredMatches = groups.scored
+  const needsChecking = groups.needsChecking
   const shortlistRows = useMemo(() => (dataset?.listings ?? []).filter((row) => shortlist.has(row.id)), [dataset, shortlist])
   const displayed = useMemo(() => {
     const rows = mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
-    if (sortMode === 'price') return rows.slice().sort((a, b) => a.deliveredPrice - b.deliveredPrice)
+    if (sortMode === 'price') return rows.slice().sort((a, b) => (a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))
     if (sortMode === 'power') return rows.slice().sort((a, b) => (b.combinedPower ?? -1) - (a.combinedPower ?? -1))
     if (sortMode === 'value') return rows.slice().sort((a, b) => (b.valueIndex ?? -1) - (a.valueIndex ?? -1))
     return rankListings(rows)
@@ -324,6 +351,18 @@ function App() {
     setFilters(createDefaultFilters())
     setQuery('')
     setSortMode('recommended')
+  }
+
+  function handleTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, current: ResultMode) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const currentIndex = RESULT_MODES.indexOf(current)
+    const nextIndex = event.key === 'Home' ? 0
+      : event.key === 'End' ? RESULT_MODES.length - 1
+        : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + RESULT_MODES.length) % RESULT_MODES.length
+    const next = RESULT_MODES[nextIndex]
+    setMode(next)
+    requestAnimationFrame(() => document.getElementById(`tab-${next}`)?.focus())
   }
 
   if (loadError) {
@@ -360,7 +399,7 @@ function App() {
             <div className="priority-control">
               <div><span>Power priority</span><strong>{Math.round(filters.cpuWeight * 100)}% CPU · {Math.round((1 - filters.cpuWeight) * 100)}% GPU</strong></div>
               <div className="priority-labels"><span>GPU work</span><span>Backtests / builds</span></div>
-              <input type="range" min="20" max="90" step="5" value={filters.cpuWeight * 100} onChange={(event) => setNumber('cpuWeight', Number(event.target.value) / 100)} />
+              <input aria-label="CPU priority percentage" type="range" min="20" max="90" step="5" value={filters.cpuWeight * 100} onChange={(event) => setNumber('cpuWeight', Number(event.target.value) / 100)} />
             </div>
           </FilterSection>
 
@@ -411,9 +450,9 @@ function App() {
           <section className="results-section">
             <div className="results-toolbar">
               <div className="result-tabs" role="tablist" aria-label="Result groups">
-                <button role="tab" aria-selected={mode === 'matches'} className={mode === 'matches' ? 'is-active' : ''} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
-                <button role="tab" aria-selected={mode === 'needs-checking'} className={mode === 'needs-checking' ? 'is-active' : ''} onClick={() => setMode('needs-checking')}>Needs checking <span>{needsChecking.length}</span></button>
-                <button role="tab" aria-selected={mode === 'shortlist'} className={mode === 'shortlist' ? 'is-active' : ''} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
+                <button id="tab-matches" role="tab" aria-controls="results-panel" aria-selected={mode === 'matches'} tabIndex={mode === 'matches' ? 0 : -1} className={mode === 'matches' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'matches')} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
+                <button id="tab-needs-checking" role="tab" aria-controls="results-panel" aria-selected={mode === 'needs-checking'} tabIndex={mode === 'needs-checking' ? 0 : -1} className={mode === 'needs-checking' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'needs-checking')} onClick={() => setMode('needs-checking')}>Needs checking <span>{needsChecking.length}</span></button>
+                <button id="tab-shortlist" role="tab" aria-controls="results-panel" aria-selected={mode === 'shortlist'} tabIndex={mode === 'shortlist' ? 0 : -1} className={mode === 'shortlist' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'shortlist')} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
               </div>
               <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
             </div>
@@ -422,11 +461,15 @@ function App() {
               {mode === 'needs-checking' && <><CircleAlert size={16} />These may be good deals, but eBay did not provide enough CPU/GPU evidence for a defensible power score.</>}
               {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
             </div>
-            {displayed.length === 0 ? (
-              <div className="results-empty"><Laptop size={30} /><strong>{mode === 'shortlist' ? 'Your shortlist is empty' : 'No listings in this view'}</strong><span>{mode === 'shortlist' ? 'Use the heart button on any result to save it here.' : 'Reset or loosen the active filters.'}</span></div>
-            ) : (
-              <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
-            )}
+            <div id="results-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
+              {displayed.length === 0 ? (
+                <div className="results-empty"><Laptop size={30} /><strong>{mode === 'shortlist' ? 'Your shortlist is empty' : 'No listings in this view'}</strong><span>{mode === 'shortlist' ? 'Use the heart button on any result to save it here.' : 'Reset or loosen the active filters.'}</span></div>
+              ) : mode === 'shortlist' ? (
+                <ShortlistComparison rows={displayed} onRemove={(id) => setShortlist((current) => toggleSelection(current, id))} />
+              ) : (
+                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
+              )}
+            </div>
           </section>
         </main>
       </div>

@@ -274,6 +274,16 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .results-empty strong { color: var(--carbon); }
 .results-empty span { font-size: 10px; }
 
+.comparison-wrap { max-width: 100%; overflow-x: auto; background: var(--paper); }
+.comparison-wrap > p { margin: 0; padding: 10px 14px; color: var(--muted); background: #eef2f5; font-size: 10px; }
+.comparison-table { min-width: 920px; width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; }
+.comparison-table th, .comparison-table td { padding: 11px 12px; text-align: left; vertical-align: top; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.comparison-table th:first-child { width: 125px; color: var(--muted); background: #f0f3f5; font: 600 9px 'IBM Plex Mono', monospace; text-transform: uppercase; }
+.comparison-table thead th:not(:first-child) { min-width: 190px; color: var(--carbon); background: #e9eef2; }
+.comparison-table thead span { min-height: 42px; display: block; font-size: 10px; line-height: 1.35; }
+.comparison-table button { padding: 3px 0; color: var(--thermal); background: transparent; border: 0; cursor: pointer; font-size: 9px; }
+.comparison-table a { display: inline-flex; align-items: center; gap: 4px; color: var(--cobalt); font-weight: 700; text-decoration: none; }
+
 footer { min-height: 46px; display: flex; justify-content: flex-end; gap: 24px; padding: 14px clamp(18px, 3vw, 42px); color: #9ca8b0; background: var(--carbon); font: 400 8px 'IBM Plex Mono', monospace; }
 .load-state { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 10px; text-align: center; color: var(--muted); }
 .load-state h1 { margin: 0; font: 700 32px 'Barlow Condensed', sans-serif; color: var(--carbon); }

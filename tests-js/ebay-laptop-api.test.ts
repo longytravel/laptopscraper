@@ -7,6 +7,7 @@ import {
   deduplicateItems,
   fetchJsonWithRetry,
   isUsableCachedDataset,
+  isTransientEbayFailure,
   normalizeEbayItem,
 } from '../scripts/ebay-laptop-api.ts'
 
@@ -100,6 +101,49 @@ test('normalizes price, shipping, seller, buying options and return evidence', (
   assert.equal(row.returnTerms?.returnsAccepted, true)
   assert.equal(row.location, 'Leeds, GB')
   assert.deepEqual(row.searchTerms, ['RTX 4080 laptop'])
+})
+
+test('preserves unknown shipping instead of pretending it is free', () => {
+  const row = normalizeEbayItem({
+    itemId: 'unknown-shipping',
+    title: 'RTX 4080 laptop',
+    price: { value: '1800', currency: 'GBP' },
+  })
+
+  assert.equal(row.shippingPrice, null)
+})
+
+test('paginates until the configured per-search cap is reached', async () => {
+  const offsets: string[] = []
+  const fakeFetch: typeof fetch = async (input) => {
+    const url = new URL(String(input))
+    offsets.push(url.searchParams.get('offset') ?? '')
+    const offset = Number(url.searchParams.get('offset'))
+    const count = offset === 0 ? 200 : 50
+    return Response.json({
+      total: 654,
+      itemSummaries: Array.from({ length: count }, (_, index) => ({
+        itemId: `item-${offset + index}`,
+        title: 'Laptop',
+        price: { value: '1000', currency: 'GBP' },
+      })),
+    })
+  }
+
+  const result = await collectSearches({
+    token: 'test-token', marketplaceId: 'EBAY_GB', searchTerms: ['laptop'], fetchImpl: fakeFetch, perSearchLimit: 250,
+  })
+
+  assert.deepEqual(offsets, ['0', '200'])
+  assert.equal(result.items.length, 250)
+  assert.equal(result.runs[0].returned, 250)
+})
+
+test('classifies only transient OAuth/search failures as cache-eligible', () => {
+  assert.equal(isTransientEbayFailure(new Error('eBay request failed with HTTP 429: limit')), true)
+  assert.equal(isTransientEbayFailure(new Error('eBay request failed with HTTP 503: outage')), true)
+  assert.equal(isTransientEbayFailure(new Error('eBay request failed: fetch failed ECONNRESET')), true)
+  assert.equal(isTransientEbayFailure(new Error('eBay request failed with HTTP 401: invalid credentials')), false)
 })
 
 test('records a failed search while retaining successful results', async () => {

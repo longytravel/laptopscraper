@@ -1,5 +1,5 @@
-import { combinedPower, paretoFrontier } from './engine'
-import type { LaptopListing } from './types'
+import { applyFilters, combinedPower, paretoFrontier } from './engine'
+import type { LaptopFilters, LaptopListing } from './types'
 
 export const SHORTLIST_STORAGE_KEY = 'laptop-power-finder-shortlist-v1'
 
@@ -45,18 +45,34 @@ export function rankListings(listings: LaptopListing[]): LaptopListing[] {
     (b.recommendationScore - a.recommendationScore)
     || ((b.valueIndex ?? -1) - (a.valueIndex ?? -1))
     || (b.sellerFeedbackPercent ?? 0) - (a.sellerFeedbackPercent ?? 0)
-    || a.deliveredPrice - b.deliveredPrice,
+    || (a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY),
   )
 }
 
-export interface ChartListing extends LaptopListing {
+export function partitionResults(listings: LaptopListing[], filters: LaptopFilters, query = '') {
+  const normalizedQuery = query.trim().toLowerCase()
+  const coordinated = applyFilters(listings, { ...filters, showNeedsChecking: true })
+  const searched = normalizedQuery
+    ? coordinated.filter((row) => `${row.title} ${row.cpuModel ?? ''} ${row.gpuModel ?? ''} ${row.brand ?? ''}`.toLowerCase().includes(normalizedQuery))
+    : coordinated
+  const needsChecking = searched.filter((row) => row.combinedPower == null || row.deliveredPrice == null)
+  const scored = searched.filter((row) => row.combinedPower != null && row.deliveredPrice != null)
+  return {
+    matches: filters.showNeedsChecking ? searched : scored,
+    scored,
+    needsChecking,
+  }
+}
+
+export interface ChartListing extends Omit<LaptopListing, 'deliveredPrice'> {
+  deliveredPrice: number
   plottedPower: number
 }
 
 export function buildChartModel(listings: LaptopListing[], cpuWeight: number) {
   const points: ChartListing[] = listings.flatMap((listing) => {
     const plottedPower = combinedPower(listing.cpuPower, listing.gpuPower, cpuWeight)
-    return plottedPower == null ? [] : [{ ...listing, plottedPower }]
+    return plottedPower == null || listing.deliveredPrice == null ? [] : [{ ...listing, deliveredPrice: listing.deliveredPrice, plottedPower }]
   })
   const highest = Math.max(100, ...points.map((point) => point.plottedPower))
   const lowest = Math.min(100, ...points.map((point) => point.plottedPower))
@@ -75,4 +91,3 @@ export function buildChartModel(listings: LaptopListing[], cpuWeight: number) {
     frontier: frontier.map((point) => ({ ...point, plottedPower: point.combinedPower })),
   }
 }
-

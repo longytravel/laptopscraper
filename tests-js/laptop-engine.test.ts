@@ -9,6 +9,7 @@ import {
   paretoFrontier,
   parseLaptopListing,
 } from '../src/laptop/engine.ts'
+import { CPU_BENCHMARKS, GPU_BENCHMARKS } from '../src/laptop/benchmarks.ts'
 
 const baseRaw = {
   sourceListingId: 'v1|123|0',
@@ -89,6 +90,32 @@ test('flags instability, lock and charger risks', () => {
   assert.ok(parsed.riskFlags.includes('firmware or account lock'))
 })
 
+test('rejects desktop and external GPU contexts but accepts eBay laptop category evidence', () => {
+  assert.equal(parseLaptopListing({ title: 'NVIDIA RTX 4080 desktop graphics card only' }).gpuModel, null)
+  assert.equal(parseLaptopListing({ title: 'Razer Core eGPU with RTX 4070' }).gpuModel, null)
+  assert.equal(parseLaptopListing({ title: 'Custom RTX 4080 computer', categoryId: '177' }).gpuModel, 'NVIDIA GeForce RTX 4080 Laptop GPU')
+})
+
+test('does not exclude a complete laptop merely because its description mentions the motherboard', () => {
+  const parsed = parseLaptopListing({ title: 'ASUS ROG laptop RTX 4080', description: 'Motherboard tested and working.' })
+  assert.equal(parsed.hardExcluded, false)
+})
+
+test('tracks description provenance truthfully', () => {
+  const parsed = parseLaptopListing({ title: 'Gaming laptop', description: 'Intel i9-14900HX with RTX 4080' })
+  assert.equal(parsed.provenance.cpu, 'description')
+  assert.equal(parsed.provenance.gpu, 'description')
+})
+
+test('every benchmark entry carries auditable source metadata', () => {
+  for (const entry of [...CPU_BENCHMARKS, ...GPU_BENCHMARKS]) {
+    assert.ok(entry.source.name)
+    assert.match(entry.source.url, /^https:\/\//)
+    assert.match(entry.source.observedAt, /^\d{4}-\d{2}-\d{2}$/)
+    assert.ok(entry.source.metric)
+  }
+})
+
 test('anchors the current laptop and adjusts CPU priority', () => {
   assert.equal(combinedPower(100, 100, 0.6), 100)
   assert.ok(combinedPower(120, 80, 0.9) > combinedPower(120, 80, 0.2))
@@ -112,6 +139,13 @@ test('does not assign combined power when a critical component is unknown', () =
   assert.equal(listing.gpuPower, null)
   assert.equal(listing.combinedPower, null)
   assert.ok(listing.missingSpecs.includes('GPU'))
+})
+
+test('keeps delivered price and value unknown when postage is unavailable', () => {
+  const listing = enrichListing({ ...baseRaw, shippingPrice: null })
+  assert.equal(listing.deliveredPrice, null)
+  assert.equal(listing.valueIndex, null)
+  assert.ok(listing.missingSpecs.includes('shipping'))
 })
 
 test('returns only non-dominated listings on the Pareto frontier', () => {

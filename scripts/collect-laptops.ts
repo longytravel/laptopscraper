@@ -11,6 +11,7 @@ import {
   enrichEbayItems,
   getEbayAppToken,
   isUsableCachedDataset,
+  isTransientEbayFailure,
   normalizeEbayItem,
 } from './ebay-laptop-api'
 
@@ -34,30 +35,65 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
   await rename(temporary, target)
 }
 
+function upgradeLegacyCache(value: unknown): LaptopDataset {
+  const dataset = value as LaptopDataset
+  if ((dataset.schemaVersion ?? 0) >= 2) return dataset
+  const listings = dataset.listings.map((listing) => {
+    if (listing.shippingPrice !== 0) return listing
+    return {
+      ...listing,
+      shippingPrice: null,
+      deliveredPrice: null,
+      valueIndex: null,
+      missingSpecs: [...new Set([...listing.missingSpecs, 'shipping'])],
+    }
+  })
+  return {
+    ...dataset,
+    schemaVersion: 2,
+    benchmarkVersion: BENCHMARK_VERSION,
+    needsCheckingCount: listings.filter((listing) => listing.combinedPower == null || listing.deliveredPrice == null).length,
+    listings,
+  }
+}
+
+async function preserveRecentCache(outputPath: string, reason: unknown): Promise<boolean> {
+  try {
+    const cached = JSON.parse(await readFile(outputPath, 'utf8')) as unknown
+    if (!isUsableCachedDataset(cached)) return false
+    const upgraded = upgradeLegacyCache(cached)
+    await writeJsonAtomic(outputPath, upgraded)
+    console.warn('eBay refresh was temporarily unavailable; preserving the recent committed dataset for this build.')
+    console.warn(reason instanceof Error ? reason.message : String(reason))
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function main(): Promise<void> {
   const clientId = process.env.EBAY_CLIENT_ID ?? ''
   const clientSecret = process.env.EBAY_CLIENT_SECRET ?? ''
   const marketplaceId = process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB'
+  const deliveryPostalCode = process.env.EBAY_DELIVERY_POSTCODE?.trim() || undefined
   const outputPath = path.resolve('public/data/laptop-listings.json')
-  const token = await getEbayAppToken(clientId, clientSecret)
+  let token: string
+  try {
+    token = await getEbayAppToken(clientId, clientSecret)
+  } catch (error) {
+    if (isTransientEbayFailure(error) && await preserveRecentCache(outputPath, error)) return
+    throw error
+  }
   const searchResult = await collectSearches({
     token,
     marketplaceId,
     searchTerms: SEARCH_TERMS,
     perSearchLimit: Number(process.env.EBAY_LAPTOP_LIMIT_PER_SEARCH ?? 80),
+    deliveryPostalCode,
   })
   if (searchResult.items.length === 0) {
     const errors = searchResult.runs.filter((run) => run.error).map((run) => `${run.searchTerm}: ${run.error}`).join('; ')
-    try {
-      const cached = JSON.parse(await readFile(outputPath, 'utf8')) as unknown
-      if (isUsableCachedDataset(cached)) {
-        console.warn('eBay refresh returned no listings; preserving the recent committed dataset for this build.')
-        console.warn(errors)
-        return
-      }
-    } catch {
-      // The exact collection error below is more useful than a missing-cache error.
-    }
+    if (await preserveRecentCache(outputPath, errors)) return
     throw new Error(`No eBay laptop listings were collected. ${errors}`)
   }
 
@@ -65,21 +101,22 @@ async function main(): Promise<void> {
   const candidates = searchResult.items
     .filter((item) => Number(item.price?.value ?? 0) <= 3000)
     .slice(0, maxDetails)
-  const enrichedItems = await enrichEbayItems({ items: candidates, token, marketplaceId, concurrency: 6 })
+  const enrichedItems = await enrichEbayItems({ items: candidates, token, marketplaceId, concurrency: 6, deliveryPostalCode })
   const listings = enrichedItems
     .map(normalizeEbayItem)
     .map((raw) => enrichListing(raw))
-    .filter((listing) => listing.deliveredPrice > 0 && listing.deliveredPrice <= 3000)
-    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || (a.deliveredPrice - b.deliveredPrice))
+    .filter((listing) => listing.price > 0 && listing.price <= 3000 && (listing.deliveredPrice == null || listing.deliveredPrice <= 3000))
+    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY)))
 
   const dataset: LaptopDataset = {
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     marketplaceId,
     benchmarkVersion: BENCHMARK_VERSION,
     rawCount: searchResult.runs.reduce((sum, run) => sum + run.returned, 0),
     listingCount: listings.length,
     scoredCount: listings.filter((listing) => listing.combinedPower != null).length,
-    needsCheckingCount: listings.filter((listing) => listing.combinedPower == null).length,
+    needsCheckingCount: listings.filter((listing) => listing.combinedPower == null || listing.deliveredPrice == null).length,
     searchRuns: searchResult.runs,
     listings,
   }

@@ -18,10 +18,16 @@ const BRANDS = ['ASUS', 'Lenovo', 'MSI', 'Alienware', 'Dell', 'HP', 'Acer', 'Raz
 
 const HARD_EXCLUSIONS: Array<[RegExp, string]> = [
   [/\b(?:box|manual|charger|screen|display|keyboard|motherboard|mainboard|shell|case)\s+only\b/i, 'accessory only'],
-  [/\b(?:laptop\s+)?(?:motherboard|mainboard)\b/i, 'computer component only'],
   [/\b(?:spares?\s*(?:or|&)?\s*repairs?|for\s+parts|parts\s+only|faulty|untested)\b/i, 'faulty or untested'],
   [/\b(?:no\s+power|liquid\s+damage|water\s+damage)\b/i, 'major damage'],
 ]
+
+const TITLE_ONLY_EXCLUSIONS: Array<[RegExp, string]> = [
+  [/\b(?:laptop\s+)?(?:motherboard|mainboard)\b/i, 'computer component only'],
+]
+
+const DESKTOP_GPU_CONTEXT = /\b(?:desktop|graphics\s+card\s+only|gpu\s+only|e-?gpu|external\s+gpu|desktop\s+card)\b/i
+const LAPTOP_CONTEXT = /\b(?:laptop|notebook|mobile\s+workstation|rog|strix|legion|alienware|raider|predator|omen|blade|aorus)\b/i
 
 const RISKS: Array<[RegExp, string]> = [
   [/\bno\s+(?:original\s+)?charger\b/i, 'no charger'],
@@ -79,17 +85,24 @@ function resolution(text: string): string | null {
   return null
 }
 
-export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'description' | 'conditionDescription' | 'localizedAspects'>): ParsedLaptop {
+export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'description' | 'conditionDescription' | 'localizedAspects' | 'categoryId'>): ParsedLaptop {
   const title = raw.title ?? ''
   const description = `${raw.description ?? ''} ${raw.conditionDescription ?? ''}`
   const fullText = `${title} ${description}`
   const aspects = aspectMap(raw.localizedAspects)
   const cpuAspect = findAspect(aspects, ['processor', 'cpu'])
   const gpuAspect = findAspect(aspects, ['graphics processing type', 'gpu', 'graphics card', 'graphics'])
+  const aspectCpu = matchBenchmark(cpuAspect, CPU_BENCHMARKS)
+  const aspectGpu = matchBenchmark(gpuAspect, GPU_BENCHMARKS)
   const titleCpu = matchBenchmark(title, CPU_BENCHMARKS)
   const titleGpu = matchBenchmark(title, GPU_BENCHMARKS)
-  const cpu = matchBenchmark(cpuAspect, CPU_BENCHMARKS) ?? titleCpu ?? matchBenchmark(description, CPU_BENCHMARKS)
-  const gpu = matchBenchmark(gpuAspect, GPU_BENCHMARKS) ?? titleGpu ?? matchBenchmark(description, GPU_BENCHMARKS)
+  const descriptionCpu = matchBenchmark(description, CPU_BENCHMARKS)
+  const descriptionGpu = matchBenchmark(description, GPU_BENCHMARKS)
+  const cpu = aspectCpu ?? titleCpu ?? descriptionCpu
+  const hasLaptopContext = raw.categoryId === '177' || LAPTOP_CONTEXT.test(fullText) || /laptop/i.test(gpuAspect) || /\b\d{4,5}h[xs]?\b/i.test(fullText)
+  const gpu = hasLaptopContext && !DESKTOP_GPU_CONTEXT.test(fullText)
+    ? aspectGpu ?? titleGpu ?? descriptionGpu
+    : null
   const warnings: string[] = []
 
   if (cpuAspect && titleCpu && cpu?.canonical !== titleCpu.canonical) warnings.push('conflicting CPU specifications')
@@ -102,7 +115,8 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const screenAspect = screenSize(findAspect(aspects, ['screen size', 'display size']))
   const screenInches = screenAspect ?? screenSize(fullText)
   const resolutionValue = findAspect(aspects, ['maximum resolution', 'resolution'])
-  const matchedExclusion = HARD_EXCLUSIONS.find(([pattern]) => pattern.test(fullText))
+  const matchedExclusion = TITLE_ONLY_EXCLUSIONS.find(([pattern]) => pattern.test(title))
+    ?? HARD_EXCLUSIONS.find(([pattern]) => pattern.test(fullText))
   const riskFlags = RISKS.filter(([pattern]) => pattern.test(fullText)).map(([, label]) => label)
   const brand = BRANDS.find((candidate) => new RegExp(`\\b${candidate}\\b`, 'i').test(`${findAspect(aspects, ['brand'])} ${fullText}`)) ?? null
   const hasStructuredPair = Boolean(cpuAspect && gpuAspect && cpu && gpu)
@@ -111,8 +125,8 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const specConfidence = hasStructuredPair && !conflict ? 'high' : hasPair || conflict ? 'medium' : 'low'
 
   const provenance = {
-    cpu: cpuAspect && matchBenchmark(cpuAspect, CPU_BENCHMARKS) ? 'aspect' as const : cpu ? 'title' as const : 'unknown' as const,
-    gpu: gpuAspect && matchBenchmark(gpuAspect, GPU_BENCHMARKS) ? 'aspect' as const : gpu ? 'title' as const : 'unknown' as const,
+    cpu: aspectCpu ? 'aspect' as const : titleCpu ? 'title' as const : descriptionCpu ? 'description' as const : 'unknown' as const,
+    gpu: aspectGpu && gpu ? 'aspect' as const : titleGpu && gpu ? 'title' as const : descriptionGpu && gpu ? 'description' as const : 'unknown' as const,
     ram: ramAspect ? 'aspect' as const : ramGb ? 'title' as const : 'unknown' as const,
     storage: storageAspect ? 'aspect' as const : storageGb ? 'title' as const : 'unknown' as const,
   }
@@ -156,14 +170,15 @@ export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopLis
   const gpuPower = gpuEntry ? round(100 * gpuEntry.score / GPU_BASELINE) : null
   const power = combinedPower(cpuPower, gpuPower, cpuWeight)
   const price = Number(raw.price ?? 0)
-  const shippingPrice = Number(raw.shippingPrice ?? 0)
-  const deliveredPrice = round(price + shippingPrice, 2)
-  const valueIndex = power && deliveredPrice > 0 ? round(power / (deliveredPrice / 1000)) : null
+  const shippingPrice = raw.shippingPrice == null ? null : Number(raw.shippingPrice)
+  const deliveredPrice = shippingPrice == null ? null : round(price + shippingPrice, 2)
+  const valueIndex = power && deliveredPrice != null && deliveredPrice > 0 ? round(power / (deliveredPrice / 1000)) : null
   const missingSpecs = [
     !parsed.cpuModel && 'CPU',
     !parsed.gpuModel && 'GPU',
     parsed.ramGb == null && 'RAM',
     parsed.storageGb == null && 'storage',
+    shippingPrice == null && 'shipping',
   ].filter(Boolean) as string[]
   const feedback = raw.sellerFeedbackPercent ?? null
   const feedbackCount = raw.sellerFeedbackScore ?? null
@@ -210,7 +225,7 @@ function titleId(title: string): string {
 
 export function paretoFrontier<T extends FrontierPoint>(rows: T[]): T[] {
   const sorted = rows
-    .filter((row): row is T & { combinedPower: number } => row.combinedPower != null)
+    .filter((row): row is T & { combinedPower: number; deliveredPrice: number } => row.combinedPower != null && row.deliveredPrice != null)
     .slice()
     .sort((a, b) => a.deliveredPrice - b.deliveredPrice || b.combinedPower - a.combinedPower)
   const frontier: T[] = []
@@ -261,7 +276,9 @@ export function applyFilters(listings: LaptopListing[], filters: LaptopFilters):
   return listings.filter((listing) => {
     const recomputedPower = combinedPower(listing.cpuPower, listing.gpuPower, filters.cpuWeight)
     const needsChecking = recomputedPower == null
-    if (listing.deliveredPrice < filters.minPrice || listing.deliveredPrice > filters.maxPrice) return false
+    const unknownPrice = listing.deliveredPrice == null
+    if (unknownPrice && !filters.showNeedsChecking) return false
+    if (!unknownPrice && (listing.deliveredPrice! < filters.minPrice || listing.deliveredPrice! > filters.maxPrice)) return false
     if (listing.hardExcluded && !filters.showHardExcluded) return false
     if (needsChecking && !filters.showNeedsChecking) return false
     if (!needsChecking && recomputedPower! < filters.minCombinedPower) return false
@@ -288,7 +305,7 @@ export function applyFilters(listings: LaptopListing[], filters: LaptopFilters):
     return {
       ...listing,
       combinedPower: power,
-      valueIndex: power && listing.deliveredPrice > 0 ? round(power / (listing.deliveredPrice / 1000)) : null,
+      valueIndex: power && listing.deliveredPrice != null && listing.deliveredPrice > 0 ? round(power / (listing.deliveredPrice / 1000)) : null,
     }
   })
 }

@@ -21,6 +21,7 @@ export interface EbaySearchItem extends Record<string, unknown> {
   buyingOptions?: string[]
   returnTerms?: { returnsAccepted?: boolean }
   itemCreationDate?: string
+  categories?: Array<{ categoryId?: string; categoryName?: string }>
   searchTerm?: string
   searchTerms?: string[]
 }
@@ -39,6 +40,13 @@ export function isUsableCachedDataset(value: unknown, now = Date.now(), maxAgeHo
   if (dataset.listingCount <= 0 || dataset.listings.length <= 0) return false
   const generatedAt = Date.parse(dataset.generatedAt)
   return Number.isFinite(generatedAt) && now >= generatedAt && now - generatedAt <= maxAgeHours * 60 * 60 * 1000
+}
+
+export function isTransientEbayFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  if (/HTTP\s+(?:429|5\d\d)\b/i.test(message)) return true
+  if (/HTTP\s+(?:400|401|403|404|422)\b/i.test(message)) return false
+  return /(?:fetch failed|network|ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|socket|temporar)/i.test(message)
 }
 
 export function buildSearchParams(searchTerm: string, limit = 80, offset = 0): URLSearchParams {
@@ -133,8 +141,9 @@ export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
     title: item.title ?? '',
     description: item.shortDescription ?? '',
     conditionDescription: item.conditionDescription ?? '',
+    categoryId: item.categories?.find((category) => category.categoryId)?.categoryId,
     price: Number(item.price?.value ?? 0),
-    shippingPrice: Number(shipping ?? 0),
+    shippingPrice: shipping == null || shipping === '' ? null : Number(shipping),
     currency: item.price?.currency ?? 'GBP',
     condition: item.condition ?? 'Unknown',
     sellerName: seller.username ?? 'Unknown seller',
@@ -160,6 +169,7 @@ export async function collectSearches(options: {
   fetchImpl?: typeof fetch
   perSearchLimit?: number
   retries?: number
+  deliveryPostalCode?: string
 }): Promise<{ items: Array<EbaySearchItem & { searchTerms: string[] }>; runs: SearchRun[] }> {
   const fetchImpl = options.fetchImpl ?? fetch
   const perSearchLimit = options.perSearchLimit ?? 80
@@ -167,24 +177,37 @@ export async function collectSearches(options: {
   const runs: SearchRun[] = []
 
   for (const searchTerm of options.searchTerms) {
+    const collected: EbaySearchItem[] = []
+    let total = 0
     try {
-      const params = buildSearchParams(searchTerm, perSearchLimit, 0)
-      const payload = await fetchJsonWithRetry<{ total?: number; itemSummaries?: EbaySearchItem[] }>(
-        fetchImpl,
-        `${SEARCH_URL}?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${options.token}`,
-            'X-EBAY-C-MARKETPLACE-ID': options.marketplaceId,
-          },
-        },
-        { retries: options.retries },
-      )
-      const returned = payload.itemSummaries ?? []
-      items.push(...returned.map((item) => ({ ...item, searchTerm })))
-      runs.push({ searchTerm, returned: returned.length, total: payload.total ?? returned.length })
+      let offset = 0
+      while (collected.length < perSearchLimit) {
+        const pageLimit = Math.min(200, perSearchLimit - collected.length)
+        const params = buildSearchParams(searchTerm, pageLimit, offset)
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${options.token}`,
+          'X-EBAY-C-MARKETPLACE-ID': options.marketplaceId,
+        }
+        if (options.deliveryPostalCode) {
+          headers['X-EBAY-C-ENDUSERCTX'] = `contextualLocation=country%3DGB%2Czip%3D${encodeURIComponent(options.deliveryPostalCode)}`
+        }
+        const payload = await fetchJsonWithRetry<{ total?: number; itemSummaries?: EbaySearchItem[] }>(
+          fetchImpl,
+          `${SEARCH_URL}?${params}`,
+          { headers },
+          { retries: options.retries },
+        )
+        const page = payload.itemSummaries ?? []
+        total = payload.total ?? page.length
+        collected.push(...page.slice(0, pageLimit))
+        offset += page.length
+        if (page.length === 0 || offset >= total) break
+      }
+      items.push(...collected.map((item) => ({ ...item, searchTerm })))
+      runs.push({ searchTerm, returned: collected.length, total })
     } catch (error) {
-      runs.push({ searchTerm, returned: 0, total: 0, error: error instanceof Error ? error.message : String(error) })
+      items.push(...collected.map((item) => ({ ...item, searchTerm })))
+      runs.push({ searchTerm, returned: collected.length, total, error: error instanceof Error ? error.message : String(error) })
     }
   }
 
@@ -197,6 +220,7 @@ export async function enrichEbayItems(options: {
   marketplaceId: string
   fetchImpl?: typeof fetch
   concurrency?: number
+  deliveryPostalCode?: string
 }): Promise<Array<EbaySearchItem & { searchTerms: string[]; detailError?: string }>> {
   const fetchImpl = options.fetchImpl ?? fetch
   const concurrency = Math.max(1, options.concurrency ?? 6)
@@ -211,11 +235,15 @@ export async function enrichEbayItems(options: {
       if (!item) break
       const detailUrl = item.itemHref ?? `https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(item.itemId ?? '')}`
       try {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${options.token}`,
+          'X-EBAY-C-MARKETPLACE-ID': options.marketplaceId,
+        }
+        if (options.deliveryPostalCode) {
+          headers['X-EBAY-C-ENDUSERCTX'] = `contextualLocation=country%3DGB%2Czip%3D${encodeURIComponent(options.deliveryPostalCode)}`
+        }
         const detail = await fetchJsonWithRetry<EbaySearchItem>(fetchImpl, detailUrl, {
-          headers: {
-            Authorization: `Bearer ${options.token}`,
-            'X-EBAY-C-MARKETPLACE-ID': options.marketplaceId,
-          },
+          headers,
         })
         bucket.push({ ...item, ...detail, searchTerms: item.searchTerms })
       } catch (error) {

@@ -1,4 +1,12 @@
-export const BENCHMARK_VERSION = '2026-07-passmark-class-index-v1'
+export const BENCHMARK_VERSION = '2026-07-passmark-class-index-v2'
+
+export interface BenchmarkSource {
+  name: string
+  url: string
+  observedAt: string
+  metric: string
+  method: string
+}
 
 export interface BenchmarkEntry {
   canonical: string
@@ -7,12 +15,31 @@ export interface BenchmarkEntry {
   manufacturer: string
   family?: string
   vramGb?: number
+  source: BenchmarkSource
+}
+
+type BenchmarkSeed = Omit<BenchmarkEntry, 'source'>
+
+const CPU_SOURCE: BenchmarkSource = {
+  name: 'PassMark CPU Mark',
+  url: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-14900HX&id=5867',
+  observedAt: '2026-07-21',
+  metric: 'CPU Mark representative model index',
+  method: 'Model-level catalog snapshot; rounded class estimates are used where direct samples are sparse.',
+}
+
+const GPU_SOURCE: BenchmarkSource = {
+  name: 'PassMark G3D Mark',
+  url: 'https://www.videocardbenchmark.net/',
+  observedAt: '2026-07-21',
+  metric: 'G3D Mark representative laptop-GPU class index',
+  method: 'Model-level laptop-GPU catalog snapshot; real performance varies with TGP and cooling.',
 }
 
 // CPU Mark representative results, normalized in the engine against the
 // i9-14900HX snapshot (43,881). Laptop cooling and power limits can move real
 // performance materially, so the UI labels these as model-level estimates.
-export const CPU_BENCHMARKS: BenchmarkEntry[] = [
+const CPU_SEEDS: BenchmarkSeed[] = [
   { canonical: 'Intel Core Ultra 9 285HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*285hx\b/i], score: 59400, manufacturer: 'Intel' },
   { canonical: 'Intel Core Ultra 9 285H', patterns: [/\b(?:core\s*)?ultra\s*9\s*285h\b/i], score: 38500, manufacturer: 'Intel' },
   { canonical: 'Intel Core Ultra 9 275HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*275hx\b/i], score: 54800, manufacturer: 'Intel' },
@@ -46,9 +73,11 @@ export const CPU_BENCHMARKS: BenchmarkEntry[] = [
   { canonical: 'AMD Ryzen AI 9 365', patterns: [/\bryzen\s*ai\s*9\s*365\b/i], score: 33000, manufacturer: 'AMD' },
 ]
 
+export const CPU_BENCHMARKS: BenchmarkEntry[] = CPU_SEEDS.map((entry) => ({ ...entry, source: CPU_SOURCE }))
+
 // G3D-style representative class indices. The GPU name alone does not encode
 // laptop TGP, so the UI keeps a visible model-estimate caveat.
-export const GPU_BENCHMARKS: BenchmarkEntry[] = [
+const GPU_SEEDS: BenchmarkSeed[] = [
   { canonical: 'NVIDIA GeForce RTX 5090 Laptop GPU', patterns: [/\brtx\s*5090\b/i], score: 35000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 24 },
   { canonical: 'NVIDIA GeForce RTX 5080 Laptop GPU', patterns: [/\brtx\s*5080\b/i], score: 31500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 16 },
   { canonical: 'NVIDIA GeForce RTX 5070 Ti Laptop GPU', patterns: [/\brtx\s*5070\s*ti\b/i], score: 27000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 12 },
@@ -61,6 +90,8 @@ export const GPU_BENCHMARKS: BenchmarkEntry[] = [
   { canonical: 'NVIDIA RTX 5000 Ada Laptop GPU', patterns: [/\brtx\s*5000\s*ada\b/i], score: 26000, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 16 },
   { canonical: 'NVIDIA RTX 4000 Ada Laptop GPU', patterns: [/\brtx\s*4000\s*ada\b/i], score: 22500, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 12 },
 ]
+
+export const GPU_BENCHMARKS: BenchmarkEntry[] = GPU_SEEDS.map((entry) => ({ ...entry, source: GPU_SOURCE }))
 
 export const CPU_BASELINE = CPU_BENCHMARKS.find((entry) => entry.canonical === 'Intel Core i9-14900HX')!.score
 export const GPU_BASELINE = GPU_BENCHMARKS.find((entry) => entry.canonical === 'NVIDIA GeForce RTX 4060 Laptop GPU')!.score

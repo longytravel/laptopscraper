@@ -10,8 +10,9 @@ export interface RawLaptopListing {
   title?: string
   description?: string
   conditionDescription?: string
+  categoryId?: string
   price?: number
-  shippingPrice?: number
+  shippingPrice?: number | null
   currency?: string
   condition?: string
   sellerName?: string
@@ -56,8 +57,8 @@ export interface LaptopListing extends ParsedLaptop {
   listingUrl: string
   imageUrl: string | null
   price: number
-  shippingPrice: number
-  deliveredPrice: number
+  shippingPrice: number | null
+  deliveredPrice: number | null
   currency: string
   condition: string
   sellerName: string
@@ -78,6 +79,7 @@ export interface LaptopListing extends ParsedLaptop {
 }
 
 export interface LaptopDataset {
+  schemaVersion: number
   generatedAt: string
   marketplaceId: string
   benchmarkVersion: string
@@ -118,7 +120,6 @@ export interface LaptopFilters {
 
 export interface FrontierPoint {
   id: string
-  deliveredPrice: number
+  deliveredPrice: number | null
   combinedPower: number | null
 }
-

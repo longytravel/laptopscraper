@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { enrichListing } from '../src/laptop/engine'
+import { createDefaultFilters, enrichListing } from '../src/laptop/engine'
 import {
   buildChartModel,
   deriveFacets,
   parseShortlist,
+  partitionResults,
   rankListings,
   serializeShortlist,
   toggleSelection,
@@ -73,3 +74,24 @@ test('ranking prefers recommendation evidence then value', () => {
   assert.equal(rankListings([weakSeller, strong])[0].id, strong.id)
 })
 
+test('needs-checking results obey the same query, seller, returns and risk filters', () => {
+  const matchingUnknown = enrichListing({
+    sourceListingId: 'match', title: 'ASUS creator laptop 64GB RAM 1TB SSD', price: 900, shippingPrice: 0,
+    condition: 'Used', sellerFeedbackPercent: 100, sellerFeedbackScore: 500, returnTerms: { returnsAccepted: true },
+  })
+  const wrongBrand = enrichListing({
+    sourceListingId: 'wrong', title: 'Lenovo creator laptop 64GB RAM 1TB SSD no charger', price: 800, shippingPrice: 0,
+    condition: 'Used', sellerFeedbackPercent: 90, sellerFeedbackScore: 5, returnTerms: { returnsAccepted: false },
+  })
+  const filters = {
+    ...createDefaultFilters(),
+    showNeedsChecking: true,
+    minSellerFeedback: 99,
+    minSellerFeedbackCount: 100,
+    returnsRequired: true,
+    allowedBrands: new Set(['ASUS']),
+  }
+
+  const groups = partitionResults([matchingUnknown, wrongBrand], filters, 'creator')
+  assert.deepEqual(groups.needsChecking.map((row) => row.id), ['match'])
+})

@@ -13,11 +13,11 @@ The reference machine is an ASUS ROG Strix G16 with an Intel Core i9-14900HX, RT
 - Keeps unknown or conflicting specifications out of the precise power graph.
 - Offers coordinated sliders and filters for price, power, CPU/GPU priority, RAM, VRAM, storage, display, seller quality, condition, returns, location and risk.
 - Draws the Pareto frontier so dominated listings are easy to spot.
-- Saves a local shortlist and links directly to the original eBay listing.
+- Saves a local shortlist with a side-by-side comparison and links directly to the original eBay listing.
 
 ## Power model
 
-CPU and GPU model indices are versioned in `src/laptop/benchmarks.ts`. They are normalized against the current machine:
+CPU and GPU model indices are versioned in `src/laptop/benchmarks.ts`, including source URL, observation date, metric and estimation method for every entry. The representative PassMark CPU Mark/G3D class indices are normalized against the current machine:
 
 ```text
 cpuPower = 100 × candidateCpuIndex / i9-14900HX index
@@ -42,6 +42,7 @@ Set these values in the ignored `.env` file:
 EBAY_CLIENT_ID=your-client-id
 EBAY_CLIENT_SECRET=your-client-secret
 EBAY_MARKETPLACE_ID=EBAY_GB
+EBAY_DELIVERY_POSTCODE=your-uk-postcode
 EBAY_LAPTOP_LIMIT_PER_SEARCH=80
 EBAY_LAPTOP_DETAIL_LIMIT=320
 ```
@@ -54,6 +55,7 @@ npm run dev
 ```
 
 The collector writes `public/data/laptop-listings.json` atomically. The dashboard always displays its generation time.
+If `EBAY_DELIVERY_POSTCODE` is omitted or eBay does not quote postage, delivered price remains unknown and the listing stays off the price/power graph. A recent committed snapshot can keep a Vercel build available during a temporary eBay outage or rate limit; credential failures still fail the build.
 
 ## Verification
 
@@ -72,6 +74,7 @@ Tests cover parsing, exclusions, uncertainty, benchmark normalization, power wei
 - `EBAY_CLIENT_ID`
 - `EBAY_CLIENT_SECRET`
 - `EBAY_MARKETPLACE_ID`
+- `EBAY_DELIVERY_POSTCODE` (optional, recommended for accurate postage)
 - `EBAY_LAPTOP_LIMIT_PER_SEARCH` (optional)
 - `EBAY_LAPTOP_DETAIL_LIMIT` (optional)
 
