@@ -14,22 +14,36 @@ export interface BenchmarkEntry {
 // performance materially, so the UI labels these as model-level estimates.
 export const CPU_BENCHMARKS: BenchmarkEntry[] = [
   { canonical: 'Intel Core Ultra 9 285HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*285hx\b/i], score: 59400, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 9 285H', patterns: [/\b(?:core\s*)?ultra\s*9\s*285h\b/i], score: 38500, manufacturer: 'Intel' },
   { canonical: 'Intel Core Ultra 9 275HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*275hx\b/i], score: 54800, manufacturer: 'Intel' },
   { canonical: 'Intel Core Ultra 7 255HX', patterns: [/\b(?:core\s*)?ultra\s*7\s*255hx\b/i], score: 48000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 7 265HX', patterns: [/\b(?:core\s*)?ultra\s*7\s*265hx\b/i], score: 52000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 7 255H', patterns: [/\b(?:core\s*)?ultra\s*7\s*255h\b/i], score: 34000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 7 155H', patterns: [/\b(?:core\s*)?ultra\s*7\s*155h\b/i], score: 25000, manufacturer: 'Intel' },
   { canonical: 'Intel Core i9-14900HX', patterns: [/\b(?:intel\s*)?(?:core\s*)?i9[-\s]?14900hx\b/i], score: 43881, manufacturer: 'Intel' },
   { canonical: 'Intel Core i9-13980HX', patterns: [/\bi9[-\s]?13980hx\b/i], score: 46800, manufacturer: 'Intel' },
   { canonical: 'Intel Core i9-13950HX', patterns: [/\bi9[-\s]?13950hx\b/i], score: 45500, manufacturer: 'Intel' },
   { canonical: 'Intel Core i9-13900HX', patterns: [/\bi9[-\s]?13900hx\b/i], score: 45000, manufacturer: 'Intel' },
   { canonical: 'Intel Core i7-14700HX', patterns: [/\bi7[-\s]?14700hx\b/i], score: 37000, manufacturer: 'Intel' },
   { canonical: 'Intel Core i7-14650HX', patterns: [/\bi7[-\s]?14650hx\b/i], score: 33000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i7-13700HX', patterns: [/\bi7[-\s]?13700hx\b/i], score: 31000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i7-13650HX', patterns: [/\bi7[-\s]?13650hx\b/i], score: 30500, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i7-13700H', patterns: [/\bi7[-\s]?13700h\b/i], score: 28000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-13900H', patterns: [/\bi9[-\s]?13900h\b/i], score: 29000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-12900HX', patterns: [/\bi9[-\s]?12900hx\b/i], score: 34000, manufacturer: 'Intel' },
   { canonical: 'Intel Core Ultra 9 185H', patterns: [/\b(?:core\s*)?ultra\s*9\s*185h\b/i], score: 29200, manufacturer: 'Intel' },
   { canonical: 'AMD Ryzen 9 9955HX3D', patterns: [/\bryzen\s*9\s*9955hx3d\b/i], score: 67500, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen 9 9955HX', patterns: [/\bryzen\s*9\s*9955hx\b/i], score: 65500, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen 9 7945HX3D', patterns: [/\bryzen\s*9\s*7945hx3d\b/i], score: 56000, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen 9 7945HX', patterns: [/\bryzen\s*9\s*7945hx\b/i], score: 54500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 8940HX', patterns: [/\bryzen\s*9\s*8940hx\b/i], score: 51000, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 8945H', patterns: [/\bryzen\s*9\s*8945h\b/i], score: 31000, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 7940HS', patterns: [/\bryzen\s*9\s*7940hs\b/i], score: 30000, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen 9 7845HX', patterns: [/\bryzen\s*9\s*7845hx\b/i], score: 47000, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen AI Max+ 395', patterns: [/\bryzen\s*ai\s*max\+?\s*395\b/i], score: 58500, manufacturer: 'AMD' },
   { canonical: 'AMD Ryzen AI 9 HX 370', patterns: [/\bryzen\s*ai\s*9\s*hx\s*370\b/i], score: 35000, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen AI 9 HX 375', patterns: [/\bryzen\s*ai\s*9\s*hx\s*375\b/i], score: 36500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen AI 9 365', patterns: [/\bryzen\s*ai\s*9\s*365\b/i], score: 33000, manufacturer: 'AMD' },
 ]
 
 // G3D-style representative class indices. The GPU name alone does not encode
@@ -54,4 +68,3 @@ export const GPU_BASELINE = GPU_BENCHMARKS.find((entry) => entry.canonical === '
 export function matchBenchmark(text: string, catalog: BenchmarkEntry[]): BenchmarkEntry | null {
   return catalog.find((entry) => entry.patterns.some((pattern) => pattern.test(text))) ?? null
 }
-

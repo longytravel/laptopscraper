@@ -43,6 +43,18 @@ test('parses CPU, GPU, RAM, storage and screen size from a title', () => {
   assert.equal(parsed.screenInches, 16)
 })
 
+test('recognizes current high-performance CPU families seen in live eBay data', () => {
+  const cases = [
+    ['Ryzen AI 9 365 RTX 5070 laptop', 'AMD Ryzen AI 9 365'],
+    ['Core Ultra 9 285H RTX 5070 laptop', 'Intel Core Ultra 9 285H'],
+    ['Core Ultra 7 265HX RTX 5070 laptop', 'Intel Core Ultra 7 265HX'],
+    ['Ryzen 9 8940HX RTX 5070 laptop', 'AMD Ryzen 9 8940HX'],
+  ]
+  for (const [title, expected] of cases) {
+    assert.equal(parseLaptopListing({ title }).cpuModel, expected)
+  }
+})
+
 test('structured aspects take precedence and conflicts lower confidence', () => {
   const parsed = parseLaptopListing({
     title: 'Lenovo Legion i9-14900HX RTX 4070 32GB 1TB',
