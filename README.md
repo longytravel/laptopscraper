@@ -25,7 +25,7 @@ gpuPower = 100 × candidateGpuIndex / RTX 4060 Laptop index
 combinedPower = 100 × (cpuPower / 100)^cpuWeight × (gpuPower / 100)^(1-cpuWeight)
 ```
 
-The dashboard defaults to 60% CPU / 40% GPU because build, Python and backtesting workloads are CPU-heavy. The weighting is adjustable from 20% to 90% CPU. Model names cannot capture laptop TGP, firmware, cooling or sustained thermal behavior, so the dashboard explicitly labels power as an estimate.
+The dashboard defaults to your full replacement floor: 64 GB RAM and at least 100 CPU, 100 GPU and 100 combined power. It uses 60% CPU / 40% GPU because build, Python and backtesting workloads are CPU-heavy. The weighting is adjustable from 20% to 90% CPU. Model names cannot capture laptop TGP, firmware, cooling or sustained thermal behavior, so the dashboard explicitly labels power as an estimate.
 
 ## Local setup
 

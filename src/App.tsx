@@ -393,9 +393,9 @@ function App() {
           <FilterSection title="Price & power">
             <RangeControl label="Minimum price" value={filters.minPrice} min={0} max={3000} step={50} display={MONEY.format(filters.minPrice)} onChange={(value) => setNumber('minPrice', Math.min(value, filters.maxPrice))} />
             <RangeControl label="Maximum price" value={filters.maxPrice} min={0} max={3000} step={50} display={MONEY.format(filters.maxPrice)} onChange={(value) => setNumber('maxPrice', Math.max(value, filters.minPrice))} />
-            <RangeControl label="Minimum overall power" value={filters.minCombinedPower} min={50} max={220} step={5} display={rangeLabel(filters.minCombinedPower)} onChange={(value) => setNumber('minCombinedPower', value)} />
-            <RangeControl label="Minimum CPU power" value={filters.minCpuPower} min={0} max={160} step={5} display={filters.minCpuPower ? rangeLabel(filters.minCpuPower) : 'Any'} onChange={(value) => setNumber('minCpuPower', value)} />
-            <RangeControl label="Minimum GPU power" value={filters.minGpuPower} min={0} max={220} step={5} display={filters.minGpuPower ? rangeLabel(filters.minGpuPower) : 'Any'} onChange={(value) => setNumber('minGpuPower', value)} />
+            <RangeControl label="Minimum overall power" value={filters.minCombinedPower} min={50} max={220} step={5} display={`${rangeLabel(filters.minCombinedPower)}${filters.minCombinedPower === 100 ? ' · your G16' : ''}`} onChange={(value) => setNumber('minCombinedPower', value)} />
+            <RangeControl label="Minimum CPU power" value={filters.minCpuPower} min={0} max={160} step={5} display={filters.minCpuPower ? `${rangeLabel(filters.minCpuPower)}${filters.minCpuPower === 100 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minCpuPower', value)} />
+            <RangeControl label="Minimum GPU power" value={filters.minGpuPower} min={0} max={220} step={5} display={filters.minGpuPower ? `${rangeLabel(filters.minGpuPower)}${filters.minGpuPower === 100 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minGpuPower', value)} />
             <div className="priority-control">
               <div><span>Power priority</span><strong>{Math.round(filters.cpuWeight * 100)}% CPU · {Math.round((1 - filters.cpuWeight) * 100)}% GPU</strong></div>
               <div className="priority-labels"><span>GPU work</span><span>Backtests / builds</span></div>
@@ -404,7 +404,7 @@ function App() {
           </FilterSection>
 
           <FilterSection title="Hardware">
-            <RangeControl label="Minimum RAM" value={filters.minRamGb} min={16} max={128} step={16} display={`${filters.minRamGb} GB`} onChange={(value) => setNumber('minRamGb', value)} />
+            <RangeControl label="Minimum RAM" value={filters.minRamGb} min={16} max={128} step={16} display={`${filters.minRamGb} GB${filters.minRamGb === 64 ? ' · your G16' : ''}`} onChange={(value) => setNumber('minRamGb', value)} />
             <RangeControl label="Minimum VRAM" value={filters.minVramGb} min={0} max={24} step={2} display={filters.minVramGb ? `${filters.minVramGb} GB` : 'Any'} onChange={(value) => setNumber('minVramGb', value)} />
             <RangeControl label="Minimum storage" value={filters.minStorageGb} min={0} max={4096} step={256} display={filters.minStorageGb ? `${filters.minStorageGb >= 1024 ? `${filters.minStorageGb / 1024} TB` : `${filters.minStorageGb} GB`}` : 'Any'} onChange={(value) => setNumber('minStorageGb', value)} />
             <RangeControl label="Minimum screen" value={filters.minScreenInches} min={0} max={18} step={0.5} display={filters.minScreenInches ? `${filters.minScreenInches} in` : 'Any'} onChange={(value) => setNumber('minScreenInches', value)} />
