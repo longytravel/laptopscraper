@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { mkdir, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { BENCHMARK_VERSION } from '../src/laptop/benchmarks'
@@ -10,6 +10,7 @@ import {
   collectSearches,
   enrichEbayItems,
   getEbayAppToken,
+  isUsableCachedDataset,
   normalizeEbayItem,
 } from './ebay-laptop-api'
 
@@ -47,6 +48,16 @@ async function main(): Promise<void> {
   })
   if (searchResult.items.length === 0) {
     const errors = searchResult.runs.filter((run) => run.error).map((run) => `${run.searchTerm}: ${run.error}`).join('; ')
+    try {
+      const cached = JSON.parse(await readFile(outputPath, 'utf8')) as unknown
+      if (isUsableCachedDataset(cached)) {
+        console.warn('eBay refresh returned no listings; preserving the recent committed dataset for this build.')
+        console.warn(errors)
+        return
+      }
+    } catch {
+      // The exact collection error below is more useful than a missing-cache error.
+    }
     throw new Error(`No eBay laptop listings were collected. ${errors}`)
   }
 
@@ -81,4 +92,3 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error))
   process.exitCode = 1
 })
-

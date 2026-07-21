@@ -32,6 +32,15 @@ export interface SearchRun {
   error?: string
 }
 
+export function isUsableCachedDataset(value: unknown, now = Date.now(), maxAgeHours = 72): boolean {
+  if (!value || typeof value !== 'object') return false
+  const dataset = value as { generatedAt?: unknown; listingCount?: unknown; listings?: unknown }
+  if (typeof dataset.generatedAt !== 'string' || typeof dataset.listingCount !== 'number' || !Array.isArray(dataset.listings)) return false
+  if (dataset.listingCount <= 0 || dataset.listings.length <= 0) return false
+  const generatedAt = Date.parse(dataset.generatedAt)
+  return Number.isFinite(generatedAt) && now >= generatedAt && now - generatedAt <= maxAgeHours * 60 * 60 * 1000
+}
+
 export function buildSearchParams(searchTerm: string, limit = 80, offset = 0): URLSearchParams {
   return new URLSearchParams({
     q: searchTerm,

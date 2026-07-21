@@ -6,8 +6,16 @@ import {
   collectSearches,
   deduplicateItems,
   fetchJsonWithRetry,
+  isUsableCachedDataset,
   normalizeEbayItem,
 } from '../scripts/ebay-laptop-api.ts'
+
+test('accepts only recent, non-empty cached datasets for rate-limit fallback', () => {
+  const now = Date.parse('2026-07-21T20:00:00Z')
+  assert.equal(isUsableCachedDataset({ generatedAt: '2026-07-21T19:00:00Z', listingCount: 10, listings: [{}] }, now), true)
+  assert.equal(isUsableCachedDataset({ generatedAt: '2026-07-17T19:00:00Z', listingCount: 10, listings: [{}] }, now), false)
+  assert.equal(isUsableCachedDataset({ generatedAt: '2026-07-21T19:00:00Z', listingCount: 0, listings: [] }, now), false)
+})
 
 test('builds an eBay GB laptop search capped at £3,000', () => {
   const params = buildSearchParams('RTX 4080 laptop', 80, 0)
@@ -118,4 +126,3 @@ test('records a failed search while retaining successful results', async () => {
   assert.equal(result.runs.find((run) => run.searchTerm === 'broken')?.returned, 0)
   assert.match(result.runs.find((run) => run.searchTerm === 'broken')?.error ?? '', /500/)
 })
-
