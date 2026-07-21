@@ -68,7 +68,7 @@ export async function fetchJsonWithRetry<T>(
     } catch (error) {
       if (error instanceof Error && /^eBay request failed/.test(error.message)) throw error
       lastError = error instanceof Error ? error : new Error(String(error))
-      if (attempt === retries) throw new Error(`eBay request failed: ${lastError.message}`)
+      if (attempt === retries) throw new Error(`eBay request failed: ${lastError.message}`, { cause: error })
       await sleep(250 * 2 ** attempt)
     }
   }
@@ -217,4 +217,3 @@ export async function enrichEbayItems(options: {
 
   return output.flat()
 }
-

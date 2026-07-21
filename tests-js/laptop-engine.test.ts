@@ -131,6 +131,7 @@ test('default filters enforce the £3,000 ceiling and current-machine power', ()
   assert.equal(filters.minCombinedPower, 100)
   assert.equal(filters.cpuWeight, 0.6)
   assert.equal(filters.minRamGb, 32)
+  assert.deepEqual(filters.excludedRisks, new Set(['instability reported', 'firmware or account lock', 'no charger']))
 })
 
 test('coordinates power, hardware, seller, condition, returns and risk filters', () => {

@@ -1,91 +1,82 @@
-# Camera Lens Resale Arbitrage Scanner
+# Laptop Power Finder
 
-Local MVP for finding underpriced used camera lenses, valuing them from sold comparable data, and ranking resale opportunities after fees, postage, prep, and risk buffers.
+An API-backed decision dashboard for finding powerful laptops currently available on eBay UK. It compares delivered price against normalized CPU/GPU power, highlights the price-power Pareto frontier, and keeps seller, returns, condition and specification uncertainty visible.
 
-## Current Shape
+The reference machine is an ASUS ROG Strix G16 with an Intel Core i9-14900HX, RTX 4060 Laptop GPU and 64 GB RAM. Its CPU, GPU and combined power scores are each normalized to `100`.
 
-- React/Vite dashboard with ranked opportunities, scatter graph, listing review panel, search config, sold trend panel, and run history.
-- Python pipeline modules for eBay active listing collection, sold comp abstraction, SQLite schema, title normalization, risk phrase detection, valuation, profit scoring, and sales trend calculation.
-- Official eBay Browse API collector is implemented for active listings. Sold comps are behind an interface because Marketplace Insights access is account-dependent.
-- AI extraction module is scaffolded with structured JSON output and content hashing for cache keys.
+## What it does
 
-## Setup
+- Collects current listings through the official eBay Browse API—no HTML scraping.
+- Searches high-performance gaming and mobile-workstation families up to £3,000 delivered.
+- Deduplicates overlapping searches and enriches listings through the eBay item endpoint.
+- Extracts CPU, GPU, RAM, storage, display, seller, returns and buying-option evidence.
+- Keeps unknown or conflicting specifications out of the precise power graph.
+- Offers coordinated sliders and filters for price, power, CPU/GPU priority, RAM, VRAM, storage, display, seller quality, condition, returns, location and risk.
+- Draws the Pareto frontier so dominated listings are easy to spot.
+- Saves a local shortlist and links directly to the original eBay listing.
+
+## Power model
+
+CPU and GPU model indices are versioned in `src/laptop/benchmarks.ts`. They are normalized against the current machine:
+
+```text
+cpuPower = 100 × candidateCpuIndex / i9-14900HX index
+gpuPower = 100 × candidateGpuIndex / RTX 4060 Laptop index
+combinedPower = 100 × (cpuPower / 100)^cpuWeight × (gpuPower / 100)^(1-cpuWeight)
+```
+
+The dashboard defaults to 60% CPU / 40% GPU because build, Python and backtesting workloads are CPU-heavy. The weighting is adjustable from 20% to 90% CPU. Model names cannot capture laptop TGP, firmware, cooling or sustained thermal behavior, so the dashboard explicitly labels power as an estimate.
+
+## Local setup
+
+Requirements: Node.js 24+ and eBay production Browse API credentials.
 
 ```powershell
 npm install
+Copy-Item .env.example .env
+```
+
+Set these values in the ignored `.env` file:
+
+```dotenv
+EBAY_CLIENT_ID=your-client-id
+EBAY_CLIENT_SECRET=your-client-secret
+EBAY_MARKETPLACE_ID=EBAY_GB
+EBAY_LAPTOP_LIMIT_PER_SEARCH=80
+EBAY_LAPTOP_DETAIL_LIMIT=320
+```
+
+Collect live data and start the app:
+
+```powershell
+npm run collect:laptops
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+The collector writes `public/data/laptop-listings.json` atomically. The dashboard always displays its generation time.
 
-Python is not installed in this Windows environment right now. Once installed:
+## Verification
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python -m pipeline.run collect
-uvicorn pipeline.api:app --reload
-pytest
+npm test
+npm run lint
+npm run build
 ```
 
-## Credentials
+Tests cover parsing, exclusions, uncertainty, benchmark normalization, power weighting, coordinated filters, Pareto calculation, shortlist storage, eBay request filters, retry behavior and deduplication.
 
-Copy `.env.example` to `.env` and add secrets there. Do not commit `.env`.
+## Vercel
 
-```ini
-EBAY_CLIENT_ID=
-EBAY_CLIENT_SECRET=
-EBAY_MARKETPLACE_ID=EBAY_GB
-OPENAI_API_KEY=
-```
+`vercel.json` runs `npm run build:live`, so every production deployment refreshes the eBay dataset before building the static Vite app. Configure these encrypted project variables in Vercel:
 
-If a production eBay client secret has been pasted into any chat, ticket, or shared log, rotate/reset it in the eBay developer portal before using it.
+- `EBAY_CLIENT_ID`
+- `EBAY_CLIENT_SECRET`
+- `EBAY_MARKETPLACE_ID`
+- `EBAY_LAPTOP_LIMIT_PER_SEARCH` (optional)
+- `EBAY_LAPTOP_DETAIL_LIMIT` (optional)
 
-## Config
+Credentials are used only during the server-side build and are never shipped to the browser bundle.
 
-Non-secret settings live in `config.yaml`:
+## Buying-safety boundary
 
-- UK/GBP marketplace defaults.
-- Ten starter lens searches.
-- Max buy price and minimum profit/ROI.
-- Fee, postage, prep, packaging, and risk buffer assumptions.
-
-## Pipeline
-
-Primary flow:
-
-```text
-collect active listings -> collect sold comps -> normalize identity -> value from comps -> score -> review in dashboard
-```
-
-Implemented modules:
-
-- `pipeline/collectors/ebay.py`: eBay Browse API active listing collector.
-- `pipeline/collectors/base.py`: active listing and sold comp interfaces.
-- `pipeline/ai/lens_parser.py`: deterministic v1 lens title parser and risk/accessory extraction.
-- `pipeline/ai/openai_extractor.py`: OpenAI structured extraction scaffold.
-- `pipeline/scoring/valuation.py`: comparable filtering and median/IQR valuation.
-- `pipeline/scoring/profit.py`: fee, postage, prep, risk buffer, profit and ROI math.
-- `pipeline/scoring/opportunities.py`: buy score and decision labels.
-- `pipeline/scoring/trends.py`: sold volume, price momentum, and sell-through proxy.
-- `pipeline/db/schema.sql`: local SQLite tables.
-
-## eBay API Notes
-
-The active listing collector uses eBay Browse item summary search at:
-
-```text
-https://api.ebay.com/buy/browse/v1/item_summary/search
-```
-
-It requests an OAuth app token with client credentials and sends `X-EBAY-C-MARKETPLACE-ID: EBAY_GB`. The Browse docs describe keyword search, field groups such as `EXTENDED`, filters, and marketplace headers.
-
-Marketplace Insights/Product Research access varies by account approval. The code keeps sold comps abstract so a Marketplace Insights implementation, imported CSV, or later scraper can feed the same `SoldComp` shape.
-
-## V1 Gaps
-
-- Persistence writers are not wired yet; schema and models are ready.
-- Sold comp collector is a placeholder until Marketplace Insights access is available or another compliant source is chosen.
-- Dashboard currently uses representative seed data rather than live API data.
-- Python tests cannot be run in this session until Python is installed.
+The dashboard reports observable listing evidence; it does not certify a laptop as safe. Verify the exact model, GPU TGP, RAM upgrade path, charger, serial/warranty status and return terms with the seller before purchase.

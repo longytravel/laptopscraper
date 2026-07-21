@@ -1,583 +1,438 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
+import {
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  CircleAlert,
+  Cpu,
+  ExternalLink,
+  Filter,
+  Gauge,
+  Heart,
+  Laptop,
+  MemoryStick,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Sparkles,
+  TriangleAlert,
+  Zap,
+} from 'lucide-react'
+
 import './App.css'
-import type { LiveListing, SoldComp } from './data/types'
+import {
+  buildChartModel,
+  deriveFacets,
+  parseShortlist,
+  rankListings,
+  serializeShortlist,
+  SHORTLIST_STORAGE_KEY,
+  toggleSelection,
+} from './laptop/dashboard'
+import { applyFilters, createDefaultFilters } from './laptop/engine'
+import type { ChartListing } from './laptop/dashboard'
+import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
-type Point = {
-  listing: LiveListing
-  totalCost: number
-  marketValue: number
-  marketValueSource: 'sold-comps' | 'active-median'
-  adjustedReferenceValue: number
-  buyPct: number
-  adjustedBuyPct: number
-  expectedProfit: number
-  adjustedExpectedProfit: number
-  riskPenaltyPct: number
-  cx: number
-  cy: number
+const BASELINE_PRICE = 1170
+const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 })
+const NUMBER = new Intl.NumberFormat('en-GB')
+
+type SetFilterKey = 'allowedConditions' | 'allowedBrands' | 'allowedCpuManufacturers' | 'allowedGpuFamilies' | 'allowedBuyingOptions' | 'allowedConfidence' | 'excludedRisks'
+type ResultMode = 'matches' | 'needs-checking' | 'shortlist'
+type SortMode = 'recommended' | 'value' | 'power' | 'price'
+
+function ageLabel(value: string): string {
+  const milliseconds = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(0, Math.round(milliseconds / 60_000))
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 48) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
 }
 
-type ChartMode = 'raw' | 'adjusted'
-
-type FamilyAssessment = {
-  sourceListingId: string
-  decision: 'candidate' | 'review' | 'avoid' | 'exclude'
-  valueMultiplier: number
-  reasons: string[]
-  positiveSignals: string[]
-  riskFlags: string[]
-  conditionGrade: string
-  confidence: 'high' | 'medium' | 'low'
-  imageReviewNeeded: boolean
-  shortRecommendation: string
+function rangeLabel(value: number, suffix = ''): string {
+  return `${NUMBER.format(value)}${suffix}`
 }
 
-type AssessmentRun = {
-  generatedAt: string | null
-  method: string | null
-  model: string | null
-  count: number
-  searchTerm: string | null
-}
-
-type SoldCompsRun = {
-  generatedAt: string | null
-  source: string
-  soldCompCount: number
-  includedValuationCompCount?: number
-  excludedCompCount?: number
-  errors: Array<{ searchTerm: string; status: number; error: unknown }>
-  comps: SoldComp[]
-  note: string
-}
-
-const WIDTH = 980
-const HEIGHT = 560
-const PAD = { left: 86, right: 34, top: 34, bottom: 76 }
-
-function money(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return '-'
-  return `GBP ${value.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`
-}
-
-function pct(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return '-'
-  return `${value.toLocaleString('en-GB', { maximumFractionDigits: 1 })}%`
-}
-
-function expandDomain(values: number[], allowNegative = false): [number, number] {
-  if (values.length === 0) return allowNegative ? [-1, 1] : [0, 1]
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  if (min === max) return [allowNegative ? min - 1 : 0, max + 1]
-  const padding = (max - min) * 0.08
-  return [allowNegative ? min - padding : Math.max(0, min - padding), max + padding]
-}
-
-function ticks(min: number, max: number, count = 5): number[] {
-  const step = (max - min) / (count - 1)
-  return Array.from({ length: count }, (_, index) => min + step * index)
-}
-
-function median(values: number[]): number {
-  const sorted = values.slice().sort((a, b) => a - b)
-  if (sorted.length === 0) return 0
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-}
-
-function percentile(values: number[], p: number): number {
-  const sorted = values.slice().sort((a, b) => a - b)
-  if (sorted.length === 0) return 0
-  return sorted[Math.floor((sorted.length - 1) * p)]
-}
-
-function listingTotal(listing: LiveListing): number {
-  return listing.price + listing.shippingPrice
-}
-
-function riskPenaltyPct(listing: LiveListing): number {
-  if (listing.excluded) return 55
-  const flags = new Set(listing.riskFlags ?? [])
-  let penalty = Math.min(flags.size * 8, 32)
-  const text = `${listing.title} ${listing.condition}`.toLowerCase()
-  if (text.includes('*read*') || text.includes('read')) penalty += 10
-  if (text.includes('untested')) penalty += 22
-  if (text.includes('mold') || text.includes('fungus') || text.includes('haze')) penalty += 28
-  return Math.min(penalty, 60)
-}
-
-function expectedProfit(marketValue: number, totalBuyCost: number): number {
-  const platformFee = marketValue * 0.128
-  const fixedFee = 0.3
-  const postageOut = 5
-  const packaging = 1
-  const cleaningOrPrep = 3
-  const riskBuffer = marketValue * 0.08
-  return marketValue - totalBuyCost - platformFee - fixedFee - postageOut - packaging - cleaningOrPrep - riskBuffer
-}
-
-function App() {
-  const [listings, setListings] = useState<LiveListing[]>([])
-  const [generatedAt, setGeneratedAt] = useState<string | null>(null)
-  const [selectedSearches, setSelectedSearches] = useState<Set<string>>(new Set())
-  const [showExcluded, setShowExcluded] = useState(false)
-  const [maxPriceInput, setMaxPriceInput] = useState('500')
-  const [hovered, setHovered] = useState<Point | null>(null)
-  const [assessments, setAssessments] = useState<Map<string, FamilyAssessment>>(new Map())
-  const [assessmentRun, setAssessmentRun] = useState<AssessmentRun | null>(null)
-  const [soldCompsRun, setSoldCompsRun] = useState<SoldCompsRun | null>(null)
-
-  useEffect(() => {
-    fetch('/data/listings.json')
-      .then((response) => response.json())
-      .then((data) => {
-        const rows = (data.listings ?? []) as LiveListing[]
-        setListings(rows)
-        setGeneratedAt(data.generatedAt ?? null)
-        const availableSearches = Array.from(new Set(rows.map((row) => row.searchTerm))).sort()
-        setSelectedSearches(
-          new Set(availableSearches.includes('Canon EF 50mm f/1.8 STM') ? ['Canon EF 50mm f/1.8 STM'] : availableSearches.slice(0, 1)),
-        )
-      })
-      .catch(() => setListings([]))
-  }, [])
-
-  useEffect(() => {
-    fetch('/data/family-assessments.json')
-      .then((response) => response.json())
-      .then((data) => {
-        setAssessments(new Map((data.assessments ?? []).map((item: FamilyAssessment) => [item.sourceListingId, item])))
-        setAssessmentRun({
-          generatedAt: data.generatedAt ?? null,
-          method: data.method ?? null,
-          model: data.model ?? null,
-          count: data.count ?? (data.assessments ?? []).length,
-          searchTerm: data.searchTerm ?? null,
-        })
-      })
-      .catch(() => {
-        setAssessments(new Map())
-        setAssessmentRun(null)
-      })
-  }, [])
-
-  useEffect(() => {
-    fetch('/data/sold-comps.json')
-      .then((response) => response.json())
-      .then((data) => setSoldCompsRun(data as SoldCompsRun))
-      .catch(() => setSoldCompsRun(null))
-  }, [])
-
-  const searches = useMemo(() => Array.from(new Set(listings.map((row) => row.searchTerm))).sort(), [listings])
-  const maxPrice = Number(maxPriceInput.replaceAll(',', ''))
-  const effectiveMaxPrice = Number.isFinite(maxPrice) && maxPrice > 0 ? maxPrice : Infinity
-
-  const medianBySearch = useMemo(() => {
-    const groups = new Map<string, number[]>()
-    for (const listing of listings) {
-      if (listing.excluded) continue
-      const total = listingTotal(listing)
-      if (total <= 0) continue
-      groups.set(listing.searchTerm, [...(groups.get(listing.searchTerm) ?? []), total])
-    }
-    return new Map(Array.from(groups.entries()).map(([search, values]) => [search, median(values)]))
-  }, [listings])
-
-  const soldStatsBySearch = useMemo(() => {
-    const groups = new Map<string, number[]>()
-    for (const comp of soldCompsRun?.comps ?? []) {
-      if (comp.includeInValuation === false) continue
-      if (!comp.searchTerm || comp.price <= 0) continue
-      groups.set(comp.searchTerm, [...(groups.get(comp.searchTerm) ?? []), comp.price])
-    }
-    return new Map(
-      Array.from(groups.entries()).map(([search, values]) => [
-        search,
-        {
-          count: values.length,
-          low: percentile(values, 0.25),
-          median: median(values),
-          high: percentile(values, 0.75),
-        },
-      ]),
-    )
-  }, [soldCompsRun])
-
-  const filtered = useMemo(
-    () =>
-      listings.filter((listing) => {
-        if (!selectedSearches.has(listing.searchTerm)) return false
-        if (!showExcluded && listing.excluded) return false
-        const total = listingTotal(listing)
-        if (total <= 0 || total > effectiveMaxPrice) return false
-        return true
-      }),
-    [effectiveMaxPrice, listings, selectedSearches, showExcluded],
+function FilterSection({ title, children, open = true }: { title: string; children: React.ReactNode; open?: boolean }) {
+  return (
+    <details className="filter-section" open={open}>
+      <summary>{title}<ChevronDown size={15} aria-hidden="true" /></summary>
+      <div className="filter-section-body">{children}</div>
+    </details>
   )
+}
 
-  const rawRows = useMemo(() => {
-    return filtered.map((listing) => {
-      const totalCost = listingTotal(listing)
-      const soldStats = soldStatsBySearch.get(listing.searchTerm)
-      const marketValue = soldStats?.median ?? medianBySearch.get(listing.searchTerm) ?? totalCost
-      const assessment = assessments.get(listing.sourceListingId)
-      const penalty = assessment ? Math.max(0, (1 - assessment.valueMultiplier) * 100) : riskPenaltyPct(listing)
-      const adjustedReferenceValue = marketValue * (assessment?.valueMultiplier ?? (1 - penalty / 100))
-      return {
-        listing,
-        totalCost,
-        marketValue,
-        marketValueSource: soldStats ? 'sold-comps' as const : 'active-median' as const,
-        adjustedReferenceValue,
-        riskPenaltyPct: penalty,
-        buyPct: marketValue > 0 ? (totalCost / marketValue) * 100 : 0,
-        adjustedBuyPct: adjustedReferenceValue > 0 ? (totalCost / adjustedReferenceValue) * 100 : 999,
-        expectedProfit: expectedProfit(marketValue, totalCost),
-        adjustedExpectedProfit: expectedProfit(adjustedReferenceValue, totalCost),
-      }
-    })
-  }, [assessments, filtered, medianBySearch, soldStatsBySearch])
+function RangeControl({
+  label,
+  value,
+  min,
+  max,
+  step,
+  display,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  display: string
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="range-control">
+      <span><span>{label}</span><strong>{display}</strong></span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+    </label>
+  )
+}
 
-  const buildChart = useCallback((mode: ChartMode) => {
-    const xValues = rawRows.map((row) => (mode === 'raw' ? row.buyPct : row.adjustedBuyPct))
-    const yValues = rawRows.map((row) => (mode === 'raw' ? row.expectedProfit : row.adjustedExpectedProfit))
-    const xDomain = expandDomain(xValues)
-    const yDomain = expandDomain(yValues, true)
-    const plotW = WIDTH - PAD.left - PAD.right
-    const plotH = HEIGHT - PAD.top - PAD.bottom
-    const points: Point[] = rawRows.map((row) => {
-      const xValue = mode === 'raw' ? row.buyPct : row.adjustedBuyPct
-      const yValue = mode === 'raw' ? row.expectedProfit : row.adjustedExpectedProfit
-      return {
-        ...row,
-        cx: PAD.left + ((xValue - xDomain[0]) / (xDomain[1] - xDomain[0])) * plotW,
-        cy: PAD.top + (1 - (yValue - yDomain[0]) / (yDomain[1] - yDomain[0])) * plotH,
-      }
-    })
-    const ranked = points
-      .slice()
-      .sort((a, b) => {
-        const ay = mode === 'raw' ? a.expectedProfit : a.adjustedExpectedProfit
-        const by = mode === 'raw' ? b.expectedProfit : b.adjustedExpectedProfit
-        return by - ay || a.totalCost - b.totalCost
-      })
-    return {
-      points,
-      ranked,
-      xDomain,
-      yDomain,
-      xTicks: ticks(xDomain[0], xDomain[1]),
-      yTicks: ticks(yDomain[0], yDomain[1]),
-      best:
-        ranked.find((point) => !point.listing.excluded && (mode === 'raw' ? point.expectedProfit : point.adjustedExpectedProfit) > 0) ??
-        ranked[0] ??
-        null,
-    }
-  }, [rawRows])
+function ToggleChip({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
+  return (
+    <button type="button" className={`toggle-chip${checked ? ' is-active' : ''}`} aria-pressed={checked} onClick={onChange}>
+      {checked && <Check size={12} aria-hidden="true" />}{label}
+    </button>
+  )
+}
 
-  const chart = useMemo(() => {
-    return buildChart('raw')
-  }, [buildChart])
+function Switch({ checked, label, hint, onChange }: { checked: boolean; label: string; hint?: string; onChange: (checked: boolean) => void }) {
+  return (
+    <label className="switch-row">
+      <span><strong>{label}</strong>{hint && <small>{hint}</small>}</span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    </label>
+  )
+}
 
-  const adjustedChart = useMemo(() => {
-    return buildChart('adjusted')
-  }, [buildChart])
+function PowerChart({
+  rows,
+  cpuWeight,
+  selectedId,
+  onSelect,
+}: {
+  rows: LaptopListing[]
+  cpuWeight: number
+  selectedId: string | null
+  onSelect: (row: LaptopListing) => void
+}) {
+  const clipId = useId().replace(/:/g, '')
+  const model = useMemo(() => buildChartModel(rows, cpuWeight), [rows, cpuWeight])
+  const width = 960
+  const height = 500
+  const pad = { top: 34, right: 34, bottom: 56, left: 64 }
+  const innerWidth = width - pad.left - pad.right
+  const innerHeight = height - pad.top - pad.bottom
+  const x = (price: number) => pad.left + (price / 3000) * innerWidth
+  const y = (power: number) => pad.top + (1 - (power - model.yDomain[0]) / (model.yDomain[1] - model.yDomain[0])) * innerHeight
+  const xTicks = [0, 500, 1000, 1500, 2000, 2500, 3000]
+  const yStep = Math.max(10, Math.ceil((model.yDomain[1] - model.yDomain[0]) / 6 / 10) * 10)
+  const yTicks: number[] = []
+  for (let value = Math.ceil(model.yDomain[0] / yStep) * yStep; value <= model.yDomain[1]; value += yStep) yTicks.push(value)
+  const frontierPath = model.frontier.map((point, index) => `${index ? 'L' : 'M'} ${x(point.deliveredPrice)} ${y(point.plottedPower)}`).join(' ')
+  const selected = model.points.find((point) => point.id === selectedId) ?? null
 
-  function renderScatter(chartData: ReturnType<typeof buildChart>, mode: ChartMode) {
-    const isAdjusted = mode === 'adjusted'
-    const title = isAdjusted ? 'Expert-adjusted profit map' : 'Sold-comps profit map'
-    const subtitle = isAdjusted
-      ? 'Resale value is reduced by the mini expert assessment before profit is calculated.'
-      : 'Uses imported eBay Product Research sold comps where available; otherwise falls back to active median.'
-    return (
-      <section className="chart-card">
-        <div className="chart-title">
-          <div>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
-          </div>
-          <span>{chartData.points.length} dots</span>
-        </div>
-        <div className="chart-shell">
-          {chartData.points.length === 0 && (
-            <div className="empty">
-              <h2>No listings for these filters</h2>
-              <p>Select at least one search family or raise the max price.</p>
-            </div>
-          )}
-          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={title}>
-            <rect width={WIDTH} height={HEIGHT} fill="#0b0d10" />
-            <rect
-              x={PAD.left}
-              y={PAD.top}
-              width={(WIDTH - PAD.left - PAD.right) * 0.45}
-              height={(HEIGHT - PAD.top - PAD.bottom) * 0.5}
-              fill="#22d3ee"
-              fillOpacity="0.08"
-              stroke="#22d3ee"
-              strokeOpacity="0.45"
-              strokeDasharray="6 6"
-            />
-
-            {chartData.yTicks.map((tick) => {
-              const y = PAD.top + (1 - (tick - chartData.yDomain[0]) / (chartData.yDomain[1] - chartData.yDomain[0])) * (HEIGHT - PAD.top - PAD.bottom)
-              return (
-                <g key={`y-${mode}-${tick}`}>
-                  <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y} y2={y} stroke={Math.abs(tick) < 0.01 ? '#64748b' : '#242832'} />
-                  <text x={PAD.left - 12} y={y + 4} textAnchor="end" fill="#8b93a1" fontSize="12">{pct(tick)}</text>
-                </g>
-              )
-            })}
-
-            {chartData.xTicks.map((tick) => {
-              const x = PAD.left + ((tick - chartData.xDomain[0]) / (chartData.xDomain[1] - chartData.xDomain[0])) * (WIDTH - PAD.left - PAD.right)
-              return (
-                <g key={`x-${mode}-${tick}`}>
-                  <line x1={x} x2={x} y1={PAD.top} y2={HEIGHT - PAD.bottom} stroke="#191d25" />
-                  <text x={x} y={HEIGHT - PAD.bottom + 26} textAnchor="middle" fill="#8b93a1" fontSize="12">{pct(tick)}</text>
-                </g>
-              )
-            })}
-
-            <line x1={PAD.left} x2={WIDTH - PAD.right} y1={HEIGHT - PAD.bottom} y2={HEIGHT - PAD.bottom} stroke="#4b5563" />
-            <line x1={PAD.left} x2={PAD.left} y1={PAD.top} y2={HEIGHT - PAD.bottom} stroke="#4b5563" />
-            <text x={WIDTH / 2} y={HEIGHT - 18} textAnchor="middle" fill="#cbd5e1" fontSize="14">Total buy cost as percent of resale value</text>
-            <text x="18" y={HEIGHT / 2} transform={`rotate(-90 18 ${HEIGHT / 2})`} textAnchor="middle" fill="#cbd5e1" fontSize="14">
-              {isAdjusted ? 'Expected profit after expert adjustment' : 'Expected profit after fees and risk buffer'}
-            </text>
-
-            {chartData.points.map((point) => {
-              const yValue = isAdjusted ? point.adjustedExpectedProfit : point.expectedProfit
-              const xValue = isAdjusted ? point.adjustedBuyPct : point.buyPct
-              return (
-                <a key={`${mode}-${point.listing.sourceListingId}`} href={point.listing.listingUrl} target="_blank" rel="noreferrer">
-                  <circle
-                    cx={point.cx}
-                    cy={point.cy}
-                    r={point.listing.excluded ? 4 : point.riskPenaltyPct >= 30 ? 5 : 6}
-                    fill={point.listing.excluded ? '#64748b' : yValue >= 20 && xValue <= 75 ? '#22d3ee' : yValue > 0 ? '#f59e0b' : '#ef4444'}
-                    fillOpacity={point.listing.excluded ? 0.45 : 0.82}
-                    stroke="#111827"
-                    strokeWidth="1"
-                    onMouseMove={(event) => onPointMove(event, point)}
-                    onMouseLeave={() => setHovered(null)}
-                  >
-                    <title>{`${point.listing.title} - ${money(point.totalCost)} - ${pct(xValue)} of value - ${money(yValue)} profit`}</title>
-                  </circle>
-                </a>
-              )
-            })}
-          </svg>
-
-          <div className="legend">
-            <span><i className="cyan" /> big discount</span>
-            <span><i className="amber" /> below reference</span>
-            <span><i className="red" /> above reference</span>
-            <span><i className="grey" /> excluded</span>
-          </div>
-
-          {hovered && (
-            <div className="tooltip">
-              <strong>{hovered.listing.title}</strong>
-              <span>{hovered.listing.searchTerm}</span>
-              <em>
-                {money(hovered.totalCost)} - {money(isAdjusted ? hovered.adjustedExpectedProfit : hovered.expectedProfit)} profit
-              </em>
-              <small>
-                Market {money(hovered.marketValue)} ({hovered.marketValueSource}) - adjusted{' '}
-                {money(hovered.adjustedReferenceValue)} - buy ratio {pct(isAdjusted ? hovered.adjustedBuyPct : hovered.buyPct)}
-              </small>
-              {assessments.get(hovered.listing.sourceListingId) && (
-                <small>
-                  Assessment: {assessments.get(hovered.listing.sourceListingId)?.decision} · {assessments.get(hovered.listing.sourceListingId)?.conditionGrade}
-                </small>
-              )}
-              {hovered.listing.excluded && <b>Excluded: {hovered.listing.excludedReason}</b>}
-            </div>
-          )}
-        </div>
-      </section>
-    )
-  }
-
-  function toggleSearch(search: string) {
-    setSelectedSearches((current) => {
-      const next = new Set(current)
-      if (next.has(search)) next.delete(search)
-      else next.add(search)
-      return next
-    })
-  }
-
-  function onPointMove(event: MouseEvent<SVGCircleElement>, point: Point) {
-    setHovered(point)
-    event.currentTarget.parentElement?.appendChild(event.currentTarget)
+  function activate(point: ChartListing) {
+    onSelect(point)
   }
 
   return (
-    <main className="page">
-      <header className="header">
-        <div>
-          <p>eBay lens scanner</p>
-          <h1>Active listing value map</h1>
+    <div className="chart-wrap">
+      {model.points.length === 0 ? (
+        <div className="chart-empty">
+          <Filter size={28} aria-hidden="true" />
+          <strong>No scored laptops match these filters</strong>
+          <span>Lower a power or hardware threshold, or reset the controls.</span>
         </div>
-        <div className="snapshot">
-          Pull <span>{generatedAt ? new Date(generatedAt).toLocaleString('en-GB') : 'not run'}</span>
+      ) : (
+        <svg className="power-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${clipId}-title ${clipId}-desc`}>
+          <title id={`${clipId}-title`}>Delivered price versus estimated laptop power</title>
+          <desc id={`${clipId}-desc`}>{model.points.length} eBay listings. The current ASUS G16 is the power 100 and £1,170 reference. Green-ringed points are on the price-power Pareto frontier.</desc>
+          <defs>
+            <clipPath id={clipId}><rect x={pad.left} y={pad.top} width={innerWidth} height={innerHeight} /></clipPath>
+          </defs>
+          <g className="chart-grid" aria-hidden="true">
+            {xTicks.map((tick) => <line key={`x-${tick}`} x1={x(tick)} x2={x(tick)} y1={pad.top} y2={height - pad.bottom} />)}
+            {yTicks.map((tick) => <line key={`y-${tick}`} x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} />)}
+          </g>
+          <g className="chart-axes" aria-hidden="true">
+            {xTicks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{tick === 0 ? '£0' : `£${tick / 1000}k`}</text>)}
+            {yTicks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
+            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">DELIVERED PRICE</text>
+            <text transform={`translate(17 ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">RELATIVE POWER</text>
+          </g>
+          <g clipPath={`url(#${clipId})`}>
+            <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
+            <line className="baseline-price" x1={x(BASELINE_PRICE)} x2={x(BASELINE_PRICE)} y1={pad.top} y2={height - pad.bottom} />
+            {frontierPath && <path className="pareto-line" d={frontierPath} />}
+            {model.points.map((point) => {
+              const isSelected = point.id === selectedId
+              const isFrontier = model.frontierIds.has(point.id)
+              const radius = 5 + Math.max(0, Math.min(4, point.recommendationScore / 25))
+              return (
+                <circle
+                  key={point.id}
+                  className={`listing-point${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
+                  cx={x(point.deliveredPrice)}
+                  cy={y(point.plottedPower)}
+                  r={radius}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${point.title}, ${MONEY.format(point.deliveredPrice)}, power ${point.plottedPower}`}
+                  onClick={() => activate(point)}
+                  onFocus={() => activate(point)}
+                  onMouseEnter={() => activate(point)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      activate(point)
+                    }
+                  }}
+                ><title>{`${point.title}\n${MONEY.format(point.deliveredPrice)} · power ${point.plottedPower}`}</title></circle>
+              )
+            })}
+          </g>
+          <g className="baseline-label" aria-hidden="true">
+            <rect x={x(BASELINE_PRICE) + 8} y={y(100) - 30} width="173" height="24" rx="2" />
+            <text x={x(BASELINE_PRICE) + 17} y={y(100) - 14}>YOUR G16 · £1,170 · 100</text>
+          </g>
+        </svg>
+      )}
+      <div className="chart-legend" aria-hidden="true">
+        <span><i className="legend-dot" />Listing</span>
+        <span><i className="legend-dot frontier" />Pareto value</span>
+        <span><i className="legend-line" />Your G16 baseline</span>
+      </div>
+      <div className="chart-selection" aria-live="polite">
+        {selected ? (
+          <>
+            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span></div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.deliveredPrice)}</strong><span>power {selected.plottedPower} · value {selected.valueIndex ?? '—'}</span></div>
+            <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
+          </>
+        ) : <span>Focus or hover a point to inspect it.</span>}
+      </div>
+    </div>
+  )
+}
+
+function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; shortlisted: boolean; onShortlist: () => void }) {
+  const risk = row.riskFlags.length > 0 || row.hardExcluded
+  return (
+    <article className={`listing-card${row.combinedPower == null ? ' needs-checking' : ''}`}>
+      <div className="listing-image">
+        {row.imageUrl ? <img src={row.imageUrl} alt="" loading="lazy" /> : <Laptop aria-hidden="true" />}
+        <span className={`confidence confidence-${row.specConfidence}`}>{row.specConfidence} confidence</span>
+      </div>
+      <div className="listing-main">
+        <div className="listing-kicker">
+          <span>{row.condition}</span>
+          {row.returnsAccepted === true && <span className="positive"><ShieldCheck size={13} />Returns</span>}
+          {risk && <span className="warning"><TriangleAlert size={13} />{row.riskFlags[0] ?? row.hardExclusionReason}</span>}
+        </div>
+        <h3>{row.title}</h3>
+        <div className="spec-strip">
+          <span><Cpu size={14} />{row.cpuModel?.replace('Intel Core ', '').replace('AMD ', '') ?? 'CPU unknown'}</span>
+          <span><Zap size={14} />{row.gpuModel?.replace('NVIDIA GeForce ', '').replace(' Laptop GPU', '') ?? 'GPU unknown'}</span>
+          <span><MemoryStick size={14} />{row.ramGb ? `${row.ramGb} GB` : 'RAM unknown'}</span>
+          <span>{row.storageGb ? `${row.storageGb >= 1024 ? `${row.storageGb / 1024} TB` : `${row.storageGb} GB`} storage` : 'Storage unknown'}</span>
+        </div>
+        <p className="seller-line">{row.sellerName} · {row.sellerFeedbackPercent == null ? 'feedback unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`} · {row.location || 'location unknown'}</p>
+        {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}
+      </div>
+      <div className="listing-metrics">
+        <div><span>Delivered</span><strong>{MONEY.format(row.deliveredPrice)}</strong>{row.shippingPrice > 0 && <small>includes {MONEY.format(row.shippingPrice)} postage</small>}</div>
+        <div className="power-number"><span>Power</span><strong>{row.combinedPower ?? '—'}</strong><small>CPU {row.cpuPower ?? '—'} · GPU {row.gpuPower ?? '—'}</small></div>
+        <div><span>Value / £1k</span><strong>{row.valueIndex ?? '—'}</strong><small>recommendation {row.recommendationScore}/100</small></div>
+      </div>
+      <div className="listing-actions">
+        <button type="button" className={`icon-button${shortlisted ? ' is-active' : ''}`} onClick={onShortlist} aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}>
+          <Heart size={17} fill={shortlisted ? 'currentColor' : 'none'} />
+        </button>
+        <a className="ebay-button" href={row.listingUrl} target="_blank" rel="noreferrer">eBay <ExternalLink size={15} /></a>
+      </div>
+    </article>
+  )
+}
+
+function App() {
+  const [dataset, setDataset] = useState<LaptopDataset | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<LaptopFilters>(() => createDefaultFilters())
+  const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [mode, setMode] = useState<ResultMode>('matches')
+  const [sortMode, setSortMode] = useState<SortMode>('recommended')
+  const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/data/laptop-listings.json', { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Live data request returned HTTP ${response.status}`)
+        return response.json() as Promise<LaptopDataset>
+      })
+      .then(setDataset)
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setLoadError(error instanceof Error ? error.message : String(error))
+      })
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(SHORTLIST_STORAGE_KEY, serializeShortlist(shortlist))
+  }, [shortlist])
+
+  const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
+  const filtered = useMemo(() => {
+    const rows = applyFilters(dataset?.listings ?? [], filters)
+    const normalizedQuery = query.trim().toLowerCase()
+    return normalizedQuery ? rows.filter((row) => `${row.title} ${row.cpuModel ?? ''} ${row.gpuModel ?? ''} ${row.brand ?? ''}`.toLowerCase().includes(normalizedQuery)) : rows
+  }, [dataset, filters, query])
+  const scoredMatches = useMemo(() => filtered.filter((row) => row.combinedPower != null), [filtered])
+  const needsChecking = useMemo(() => (dataset?.listings ?? []).filter((row) => row.combinedPower == null && !row.hardExcluded && row.deliveredPrice >= filters.minPrice && row.deliveredPrice <= filters.maxPrice), [dataset, filters.minPrice, filters.maxPrice])
+  const shortlistRows = useMemo(() => (dataset?.listings ?? []).filter((row) => shortlist.has(row.id)), [dataset, shortlist])
+  const displayed = useMemo(() => {
+    const rows = mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
+    if (sortMode === 'price') return rows.slice().sort((a, b) => a.deliveredPrice - b.deliveredPrice)
+    if (sortMode === 'power') return rows.slice().sort((a, b) => (b.combinedPower ?? -1) - (a.combinedPower ?? -1))
+    if (sortMode === 'value') return rows.slice().sort((a, b) => (b.valueIndex ?? -1) - (a.valueIndex ?? -1))
+    return rankListings(rows)
+  }, [filtered, mode, needsChecking, shortlistRows, sortMode])
+  const chart = useMemo(() => buildChartModel(scoredMatches, filters.cpuWeight), [scoredMatches, filters.cpuWeight])
+
+  const effectiveSelectedId = selectedId && scoredMatches.some((row) => row.id === selectedId)
+    ? selectedId
+    : chart.points[0]?.id ?? null
+
+  function setNumber<K extends keyof LaptopFilters>(key: K, value: number) {
+    setFilters((current) => ({ ...current, [key]: value }))
+  }
+
+  function setBoolean<K extends keyof LaptopFilters>(key: K, value: boolean) {
+    setFilters((current) => ({ ...current, [key]: value }))
+  }
+
+  function toggleFilter(key: SetFilterKey, value: string) {
+    setFilters((current) => ({ ...current, [key]: toggleSelection(current[key] as Set<string>, value) }))
+  }
+
+  function reset() {
+    setFilters(createDefaultFilters())
+    setQuery('')
+    setSortMode('recommended')
+  }
+
+  if (loadError) {
+    return <main className="load-state"><CircleAlert /><h1>Live laptop data could not load</h1><p>{loadError}</p><button onClick={() => location.reload()}><RefreshCw size={16} />Try again</button></main>
+  }
+  if (!dataset) {
+    return <main className="load-state"><span className="loader" /><h1>Loading current eBay laptops</h1><p>Preparing power and price comparisons…</p></main>
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="masthead">
+        <div className="brand-lockup">
+          <div className="brand-mark"><Gauge size={25} /></div>
+          <div><span className="eyebrow">EBAY UK · LIVE REPLACEMENT SEARCH</span><h1>Laptop Power Finder</h1></div>
+        </div>
+        <div className="header-tools">
+          <div className="data-status"><span className="live-pulse" /><div><strong>{dataset.listingCount} listings scanned</strong><span>Captured {ageLabel(dataset.generatedAt)} · {dataset.scoredCount} power-scored</span></div></div>
+          <button className="reset-button" type="button" onClick={reset}><RotateCcw size={15} />Reset</button>
         </div>
       </header>
 
-      <section className="controls">
-        <div className="control-block">
-          <div className="label">Search families</div>
-          <div className="button-row">
-            {searches.map((search) => (
-              <button
-                key={search}
-                type="button"
-                onClick={() => toggleSearch(search)}
-                className={selectedSearches.has(search) ? 'selected' : ''}
-              >
-                {search}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="dashboard-layout">
+        <aside className="filter-rail" aria-label="Laptop filters">
+          <div className="filter-heading"><SlidersHorizontal size={17} /><strong>Decision controls</strong><span>{filtered.length} shown</span></div>
+          <label className="search-control"><Search size={15} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search model, CPU or GPU" /><span className="sr-only">Search listings</span></label>
 
-        <div className="filter-grid">
-          <label>
-            <span>Max total buy cost</span>
-            <input value={maxPriceInput} onChange={(event) => setMaxPriceInput(event.target.value)} inputMode="numeric" />
-          </label>
-          <label className="checkbox">
-            <input type="checkbox" checked={showExcluded} onChange={(event) => setShowExcluded(event.target.checked)} />
-            <span>Show excluded/accessory listings</span>
-          </label>
-        </div>
-      </section>
+          <FilterSection title="Price & power">
+            <RangeControl label="Minimum price" value={filters.minPrice} min={0} max={3000} step={50} display={MONEY.format(filters.minPrice)} onChange={(value) => setNumber('minPrice', Math.min(value, filters.maxPrice))} />
+            <RangeControl label="Maximum price" value={filters.maxPrice} min={0} max={3000} step={50} display={MONEY.format(filters.maxPrice)} onChange={(value) => setNumber('maxPrice', Math.max(value, filters.minPrice))} />
+            <RangeControl label="Minimum overall power" value={filters.minCombinedPower} min={50} max={220} step={5} display={rangeLabel(filters.minCombinedPower)} onChange={(value) => setNumber('minCombinedPower', value)} />
+            <RangeControl label="Minimum CPU power" value={filters.minCpuPower} min={0} max={160} step={5} display={filters.minCpuPower ? rangeLabel(filters.minCpuPower) : 'Any'} onChange={(value) => setNumber('minCpuPower', value)} />
+            <RangeControl label="Minimum GPU power" value={filters.minGpuPower} min={0} max={220} step={5} display={filters.minGpuPower ? rangeLabel(filters.minGpuPower) : 'Any'} onChange={(value) => setNumber('minGpuPower', value)} />
+            <div className="priority-control">
+              <div><span>Power priority</span><strong>{Math.round(filters.cpuWeight * 100)}% CPU · {Math.round((1 - filters.cpuWeight) * 100)}% GPU</strong></div>
+              <div className="priority-labels"><span>GPU work</span><span>Backtests / builds</span></div>
+              <input type="range" min="20" max="90" step="5" value={filters.cpuWeight * 100} onChange={(event) => setNumber('cpuWeight', Number(event.target.value) / 100)} />
+            </div>
+          </FilterSection>
 
-      {chart.best && (
-        <a className="best" href={chart.best.listing.listingUrl} target="_blank" rel="noreferrer">
-          <div>
-            <p>Highest expected profit in current view</p>
-            <h2>{chart.best.listing.title}</h2>
-          </div>
-          <div>
-            <strong>{money(chart.best.totalCost)}</strong>
-            <span>{money(chart.best.expectedProfit)} expected profit</span>
-          </div>
-        </a>
-      )}
+          <FilterSection title="Hardware">
+            <RangeControl label="Minimum RAM" value={filters.minRamGb} min={16} max={128} step={16} display={`${filters.minRamGb} GB`} onChange={(value) => setNumber('minRamGb', value)} />
+            <RangeControl label="Minimum VRAM" value={filters.minVramGb} min={0} max={24} step={2} display={filters.minVramGb ? `${filters.minVramGb} GB` : 'Any'} onChange={(value) => setNumber('minVramGb', value)} />
+            <RangeControl label="Minimum storage" value={filters.minStorageGb} min={0} max={4096} step={256} display={filters.minStorageGb ? `${filters.minStorageGb >= 1024 ? `${filters.minStorageGb / 1024} TB` : `${filters.minStorageGb} GB`}` : 'Any'} onChange={(value) => setNumber('minStorageGb', value)} />
+            <RangeControl label="Minimum screen" value={filters.minScreenInches} min={0} max={18} step={0.5} display={filters.minScreenInches ? `${filters.minScreenInches} in` : 'Any'} onChange={(value) => setNumber('minScreenInches', value)} />
+            <RangeControl label="Maximum screen" value={filters.maxScreenInches} min={13} max={20} step={0.5} display={`${filters.maxScreenInches} in`} onChange={(value) => setNumber('maxScreenInches', value)} />
+          </FilterSection>
 
-      {assessmentRun && (
-        <section className="assessment-strip">
-          <div>
-            <span>Expert review</span>
-            <strong>{assessmentRun.model ?? 'unknown model'}</strong>
-          </div>
-          <div>
-            <span>Lens family</span>
-            <strong>{assessmentRun.searchTerm ?? 'not set'}</strong>
-          </div>
-          <div>
-            <span>Listings reviewed</span>
-            <strong>{assessmentRun.count}</strong>
-          </div>
-          <div>
-            <span>Generated</span>
-            <strong>{assessmentRun.generatedAt ? new Date(assessmentRun.generatedAt).toLocaleString('en-GB') : '-'}</strong>
-          </div>
-        </section>
-      )}
+          <FilterSection title="Seller & safety">
+            <RangeControl label="Seller feedback" value={filters.minSellerFeedback} min={0} max={100} step={0.5} display={filters.minSellerFeedback ? `${filters.minSellerFeedback}%+` : 'Any'} onChange={(value) => setNumber('minSellerFeedback', value)} />
+            <RangeControl label="Feedback count" value={filters.minSellerFeedbackCount} min={0} max={2000} step={50} display={filters.minSellerFeedbackCount ? `${NUMBER.format(filters.minSellerFeedbackCount)}+` : 'Any'} onChange={(value) => setNumber('minSellerFeedbackCount', value)} />
+            <Switch checked={filters.returnsRequired} label="Returns required" onChange={(value) => setBoolean('returnsRequired', value)} />
+            <Switch checked={filters.ukOnly} label="UK item location" onChange={(value) => setBoolean('ukOnly', value)} />
+            <Switch checked={filters.showNeedsChecking} label="Include unknown power" hint="Keeps these off the graph" onChange={(value) => setBoolean('showNeedsChecking', value)} />
+            <Switch checked={filters.showHardExcluded} label="Show faulty / parts" hint="Hidden for safety" onChange={(value) => setBoolean('showHardExcluded', value)} />
+            {facets.riskFlags.length > 0 && <div className="chip-group"><span>Hide listings with</span><div>{facets.riskFlags.map((risk) => <ToggleChip key={risk} label={risk} checked={filters.excludedRisks.has(risk)} onChange={() => toggleFilter('excludedRisks', risk)} />)}</div></div>}
+          </FilterSection>
 
-      {soldCompsRun && (
-        <section className={`sold-strip ${soldCompsRun.soldCompCount === 0 ? 'blocked' : ''}`}>
-          <div>
-            <span>Sold comps</span>
-            <strong>{soldCompsRun.includedValuationCompCount ?? soldCompsRun.soldCompCount}/{soldCompsRun.soldCompCount}</strong>
-          </div>
-          <div>
-            <span>Excluded rows</span>
-            <strong>{soldCompsRun.excludedCompCount ?? 0}</strong>
-          </div>
-          <div>
-            <span>Source</span>
-            <strong>{soldCompsRun.source}</strong>
-          </div>
-          <div>
-            <span>Status</span>
-            <strong>{soldCompsRun.errors?.length ? `Blocked (${soldCompsRun.errors[0]?.status})` : 'Ready'}</strong>
-          </div>
-          <p>
-            {soldCompsRun.errors?.length
-              ? 'Official eBay sold-comps access was denied for this app. Import/export path is needed before true profit ranking.'
-              : 'Sold comps are available for valuation.'}
-          </p>
-        </section>
-      )}
+          <FilterSection title="Condition & buying" open={false}>
+            <div className="chip-group"><span>Condition</span><div>{facets.conditions.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedConditions.has(value)} onChange={() => toggleFilter('allowedConditions', value)} />)}</div></div>
+            <div className="chip-group"><span>Buying option</span><div>{facets.buyingOptions.map((value) => <ToggleChip key={value} label={value.replace('_', ' ')} checked={filters.allowedBuyingOptions.has(value)} onChange={() => toggleFilter('allowedBuyingOptions', value)} />)}</div></div>
+            <div className="chip-group"><span>Specification confidence</span><div>{(['high', 'medium', 'low'] as SpecConfidence[]).map((value) => <ToggleChip key={value} label={value} checked={filters.allowedConfidence.has(value)} onChange={() => toggleFilter('allowedConfidence', value)} />)}</div></div>
+          </FilterSection>
 
-      {renderScatter(chart, 'raw')}
-      {renderScatter(adjustedChart, 'adjusted')}
+          <FilterSection title="Brand & platform" open={false}>
+            <div className="chip-group"><span>Brand</span><div>{facets.brands.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedBrands.has(value)} onChange={() => toggleFilter('allowedBrands', value)} />)}</div></div>
+            <div className="chip-group"><span>CPU</span><div>{facets.cpuManufacturers.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedCpuManufacturers.has(value)} onChange={() => toggleFilter('allowedCpuManufacturers', value)} />)}</div></div>
+            <div className="chip-group"><span>GPU</span><div>{facets.gpuFamilies.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedGpuFamilies.has(value)} onChange={() => toggleFilter('allowedGpuFamilies', value)} />)}</div></div>
+          </FilterSection>
+        </aside>
 
-      <section className="rankings">
-        <div className="rank-header">
-          <div>
-            <h2>Listings behind the dots</h2>
-            <p>Ranked by expected profit after fees, postage, prep and risk buffer.</p>
-          </div>
-          <span>{chart.ranked.length} shown</span>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Rank</th>
-                <th>Listing</th>
-                <th>Total</th>
-                <th>Value</th>
-                <th>Profit</th>
-                <th>Seller</th>
-                <th>Risk</th>
-                <th>Assessment</th>
-                <th>Expert view</th>
-                <th>Open</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chart.ranked.slice(0, 80).map((point, index) => {
-                const assessment = assessments.get(point.listing.sourceListingId)
-                return (
-                <tr key={point.listing.sourceListingId}>
-                  <td className="mono">#{index + 1}</td>
-                  <td>
-                    <strong>{point.listing.title}</strong>
-                    <span>{point.listing.searchTerm}</span>
-                  </td>
-                  <td className="mono price">{money(point.totalCost)}</td>
-                  <td className="mono">{money(point.marketValue)}</td>
-                  <td className={`mono ${point.adjustedExpectedProfit >= 0 ? 'good' : 'bad'}`}>{money(point.adjustedExpectedProfit)}</td>
-                  <td>
-                    <strong>{point.listing.sellerName || '-'}</strong>
-                    <span>{point.listing.sellerFeedbackPercent ? `${point.listing.sellerFeedbackPercent}%` : ''}</span>
-                  </td>
-                  <td>{point.listing.excluded ? point.listing.excludedReason : point.listing.riskFlags.join(', ') || '-'}</td>
-                  <td>
-                    <strong>{assessment?.decision ?? '-'}</strong>
-                    <span>{assessment ? `${assessment.conditionGrade} · ${assessment.confidence}` : ''}</span>
-                  </td>
-                  <td className="expert-cell">
-                    <strong>{assessment?.shortRecommendation ?? '-'}</strong>
-                    <span>{assessment?.reasons?.[0] ?? assessment?.positiveSignals?.[0] ?? ''}</span>
-                  </td>
-                  <td><a href={point.listing.listingUrl} target="_blank" rel="noreferrer">open</a></td>
-                </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+        <main className="dashboard-main">
+          <section className="decision-strip" aria-label="Current filter summary">
+            <div><span>POWER-MATCHED</span><strong>{scoredMatches.length}</strong><small>at or above {filters.minCombinedPower}</small></div>
+            <div><span>PARETO PICKS</span><strong>{chart.frontierIds.size}</strong><small>no cheaper equal-power rival</small></div>
+            <div><span>NEEDS CHECKING</span><strong>{needsChecking.length}</strong><small>missing CPU or GPU evidence</small></div>
+            <p><Sparkles size={16} /> Power is normalized to your i9-14900HX + RTX 4060 G16 = <strong>100</strong>. Model scores are estimates; laptop power limits and cooling still matter.</p>
+          </section>
+
+          <section className="graph-section">
+            <div className="section-heading"><div><span>PRICE / POWER FIELD</span><h2>Where more money actually buys more machine</h2></div><div className="weight-readout"><Cpu size={16} />{Math.round(filters.cpuWeight * 100)}% CPU <span>/</span> {Math.round((1 - filters.cpuWeight) * 100)}% GPU</div></div>
+            <PowerChart rows={scoredMatches} cpuWeight={filters.cpuWeight} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
+          </section>
+
+          <section className="results-section">
+            <div className="results-toolbar">
+              <div className="result-tabs" role="tablist" aria-label="Result groups">
+                <button role="tab" aria-selected={mode === 'matches'} className={mode === 'matches' ? 'is-active' : ''} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
+                <button role="tab" aria-selected={mode === 'needs-checking'} className={mode === 'needs-checking' ? 'is-active' : ''} onClick={() => setMode('needs-checking')}>Needs checking <span>{needsChecking.length}</span></button>
+                <button role="tab" aria-selected={mode === 'shortlist'} className={mode === 'shortlist' ? 'is-active' : ''} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
+              </div>
+              <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
+            </div>
+            <div className="result-explainer">
+              {mode === 'matches' && <><ShieldCheck size={16} />Ranked with price, power, seller evidence, returns, specification confidence and observed risk.</>}
+              {mode === 'needs-checking' && <><CircleAlert size={16} />These may be good deals, but eBay did not provide enough CPU/GPU evidence for a defensible power score.</>}
+              {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
+            </div>
+            {displayed.length === 0 ? (
+              <div className="results-empty"><Laptop size={30} /><strong>{mode === 'shortlist' ? 'Your shortlist is empty' : 'No listings in this view'}</strong><span>{mode === 'shortlist' ? 'Use the heart button on any result to save it here.' : 'Reset or loosen the active filters.'}</span></div>
+            ) : (
+              <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
+            )}
+          </section>
+        </main>
+      </div>
+
+      <footer><span>Official eBay Browse API · {dataset.marketplaceId}</span><span>Benchmark catalog {dataset.benchmarkVersion}</span><span>Generated {new Date(dataset.generatedAt).toLocaleString('en-GB')}</span></footer>
+    </div>
   )
 }
 

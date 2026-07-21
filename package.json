@@ -1,34 +1,23 @@
 {
-  "name": "resale-arbitrage",
+  "name": "laptop-power-finder",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "npm run test:laptops",
     "test:laptops": "tsx --test tests-js/*.test.ts",
     "collect:laptops": "tsx scripts/collect-laptops.ts",
-    "collect:ebay": "node scripts/collect-ebay.mjs",
-    "collect:sold": "node scripts/collect-ebay-sold.mjs",
-    "import:sold": "node scripts/import-sold-comps.mjs",
-    "import:terapeak-paste": "node scripts/import-terapeak-paste.mjs",
-    "enrich:ebay": "node scripts/enrich-ebay-details.mjs",
-    "pack:lens": "node scripts/create-lens-pack.mjs",
-    "compact:lens": "node scripts/compact-lens-pack.mjs",
-    "assess:lens-mini": "node scripts/assess-lens-mini.mjs",
-    "sync:assessments": "node scripts/sync-assessments.mjs",
-    "assess:family-local": "node scripts/assess-family-local.mjs",
-    "assess:listings": "node scripts/assess-listings.mjs",
     "build": "tsc -b && vite build",
+    "build:live": "npm run collect:laptops && npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
     "lucide-react": "^1.14.0",
-    "openai": "^6.35.0",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "yaml": "^2.8.4"
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -49,8 +49,8 @@ function findAspect(aspects: Map<string, string>, names: string[]): string {
 
 function numericCapacity(text: string, kind: 'ram' | 'storage'): number | null {
   const patterns = kind === 'ram'
-    ? [/(\d{1,3})\s*GB\s*(?:DDR\d?\s*)?(?:RAM|memory)/i, /(?:RAM|memory)\s*[:\-]?\s*(\d{1,3})\s*GB/i]
-    : [/(\d+(?:\.\d+)?)\s*(TB|GB)\s*(?:NVMe|SSD|HDD|storage|solid\s+state)/i, /(?:storage|SSD|NVMe)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*(TB|GB)/i]
+    ? [/(\d{1,3})\s*GB\s*(?:DDR\d?\s*)?(?:RAM|memory)/i, /(?:RAM|memory)\s*[:-]?\s*(\d{1,3})\s*GB/i]
+    : [/(\d+(?:\.\d+)?)\s*(TB|GB)\s*(?:NVMe|SSD|HDD|storage|solid\s+state)/i, /(?:storage|SSD|NVMe)\s*[:-]?\s*(\d+(?:\.\d+)?)\s*(TB|GB)/i]
   for (const pattern of patterns) {
     const match = text.match(pattern)
     if (!match) continue
@@ -68,7 +68,7 @@ function aspectCapacity(value: string): number | null {
 }
 
 function screenSize(text: string): number | null {
-  const match = text.match(/\b(1[3-9](?:\.\d)?)\s*(?:inch(?:es)?|in\b|\")/i)
+  const match = text.match(/\b(1[3-9](?:\.\d)?)\s*(?:inch(?:es)?|in\b|")/i)
   return match ? Number(match[1]) : null
 }
 
@@ -249,7 +249,7 @@ export function createDefaultFilters(): LaptopFilters {
     allowedGpuFamilies: new Set(),
     allowedBuyingOptions: new Set(),
     allowedConfidence: new Set(),
-    excludedRisks: new Set(),
+    excludedRisks: new Set(['instability reported', 'firmware or account lock', 'no charger']),
   }
 }
 
