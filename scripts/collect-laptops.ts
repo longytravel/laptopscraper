@@ -37,21 +37,35 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
 
 function upgradeLegacyCache(value: unknown): LaptopDataset {
   const dataset = value as LaptopDataset
-  if ((dataset.schemaVersion ?? 0) >= 2) return dataset
-  const listings = dataset.listings.map((listing) => {
-    if (listing.shippingPrice !== 0) return listing
-    return {
-      ...listing,
-      shippingPrice: null,
-      deliveredPrice: null,
-      valueIndex: null,
-      missingSpecs: [...new Set([...listing.missingSpecs, 'shipping'])],
-    }
-  })
+  if ((dataset.schemaVersion ?? 0) >= 3) return dataset
+  const listings = dataset.listings.map((listing) => enrichListing({
+    sourceListingId: listing.id,
+    categoryId: '177',
+    title: listing.title,
+    description: listing.description,
+    price: listing.price,
+    // Schema 1 could not distinguish absent postage from explicit free postage,
+    // so preserve buyer safety by treating those zeroes as unknown.
+    shippingPrice: listing.shippingPrice === 0 ? null : listing.shippingPrice,
+    currency: listing.currency,
+    condition: listing.condition,
+    sellerName: listing.sellerName,
+    sellerFeedbackScore: listing.sellerFeedbackScore,
+    sellerFeedbackPercent: listing.sellerFeedbackPercent,
+    listingUrl: listing.listingUrl,
+    location: listing.location,
+    imageUrl: listing.imageUrl ?? undefined,
+    buyingOptions: listing.buyingOptions,
+    returnTerms: { returnsAccepted: listing.returnsAccepted ?? undefined },
+    listedAt: listing.listedAt,
+    scrapedAt: listing.scrapedAt ?? undefined,
+    searchTerms: listing.searchTerms,
+  }))
   return {
     ...dataset,
-    schemaVersion: 2,
+    schemaVersion: 3,
     benchmarkVersion: BENCHMARK_VERSION,
+    scoredCount: listings.filter((listing) => listing.combinedPower != null).length,
     needsCheckingCount: listings.filter((listing) => listing.combinedPower == null || listing.deliveredPrice == null).length,
     listings,
   }
@@ -109,7 +123,7 @@ async function main(): Promise<void> {
     .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY)))
 
   const dataset: LaptopDataset = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     generatedAt: new Date().toISOString(),
     marketplaceId,
     benchmarkVersion: BENCHMARK_VERSION,
