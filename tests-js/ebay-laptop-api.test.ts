@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   buildSearchParams,
+  canUseCachedSearchFallback,
   collectSearches,
   deduplicateItems,
   fetchJsonWithRetry,
@@ -113,6 +114,18 @@ test('preserves unknown shipping instead of pretending it is free', () => {
   assert.equal(row.shippingPrice, null)
 })
 
+test('uses the cheapest delivery option and ignores pickup-only options', () => {
+  const row = normalizeEbayItem({
+    itemId: 'shipping-options', title: 'Laptop', price: { value: '1000', currency: 'GBP' },
+    shippingOptions: [
+      { type: 'PICKUP', shippingCost: { value: '0', currency: 'GBP' } },
+      { type: 'EXPEDITED', shippingCost: { value: '24.99', currency: 'GBP' } },
+      { type: 'STANDARD', shippingCost: { value: '7.50', currency: 'GBP' } },
+    ],
+  })
+  assert.equal(row.shippingPrice, 7.5)
+})
+
 test('paginates until the configured per-search cap is reached', async () => {
   const offsets: string[] = []
   const fakeFetch: typeof fetch = async (input) => {
@@ -144,6 +157,30 @@ test('classifies only transient OAuth/search failures as cache-eligible', () => 
   assert.equal(isTransientEbayFailure(new Error('eBay request failed with HTTP 503: outage')), true)
   assert.equal(isTransientEbayFailure(new Error('eBay request failed: fetch failed ECONNRESET')), true)
   assert.equal(isTransientEbayFailure(new Error('eBay request failed with HTTP 401: invalid credentials')), false)
+})
+
+test('allows cached search fallback only when every failure is transient', () => {
+  assert.equal(canUseCachedSearchFallback([
+    { searchTerm: 'a', returned: 0, total: 0, error: 'rate limit', transient: true },
+    { searchTerm: 'b', returned: 0, total: 0, error: 'outage', transient: true },
+  ]), true)
+  assert.equal(canUseCachedSearchFallback([
+    { searchTerm: 'a', returned: 0, total: 0, error: 'rate limit', transient: true },
+    { searchTerm: 'b', returned: 0, total: 0, error: 'bad filter', transient: false },
+  ]), false)
+  assert.equal(canUseCachedSearchFallback([{ searchTerm: 'a', returned: 0, total: 0 }]), false)
+})
+
+test('follows eBay next links when paginating', async () => {
+  const requested: string[] = []
+  const fakeFetch: typeof fetch = async (input) => {
+    requested.push(String(input))
+    if (requested.length === 1) return Response.json({ total: 500, next: 'https://api.ebay.test/page-two', itemSummaries: [{ itemId: 'one' }] })
+    return Response.json({ total: 500, itemSummaries: [{ itemId: 'two' }] })
+  }
+  const result = await collectSearches({ token: 'token', marketplaceId: 'EBAY_GB', searchTerms: ['laptop'], fetchImpl: fakeFetch, perSearchLimit: 2 })
+  assert.equal(requested[1], 'https://api.ebay.test/page-two')
+  assert.equal(result.items.length, 2)
 })
 
 test('records a failed search while retaining successful results', async () => {

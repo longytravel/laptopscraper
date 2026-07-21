@@ -26,7 +26,7 @@ const TITLE_ONLY_EXCLUSIONS: Array<[RegExp, string]> = [
   [/\b(?:laptop\s+)?(?:motherboard|mainboard)\b/i, 'computer component only'],
 ]
 
-const DESKTOP_GPU_CONTEXT = /\b(?:desktop|graphics\s+card\s+only|gpu\s+only|e-?gpu|external\s+gpu|desktop\s+card)\b/i
+const DESKTOP_GPU_CONTEXT = /\b(?:graphics\s+card\s+only|gpu\s+only|e-?gpu|external\s+gpu|desktop\s+(?:graphics\s+card|gpu)|graphics\s+card\s+for\s+desktop)\b/i
 const LAPTOP_CONTEXT = /\b(?:laptop|notebook|mobile\s+workstation|rog|strix|legion|alienware|raider|predator|omen|blade|aorus)\b/i
 
 const RISKS: Array<[RegExp, string]> = [
@@ -110,8 +110,12 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
 
   const ramAspect = aspectCapacity(findAspect(aspects, ['ram size', 'installed ram', 'memory']))
   const storageAspect = aspectCapacity(findAspect(aspects, ['ssd capacity', 'storage capacity', 'hard drive capacity']))
-  const ramGb = ramAspect ?? numericCapacity(fullText, 'ram')
-  const storageGb = storageAspect ?? numericCapacity(fullText, 'storage')
+  const titleRam = numericCapacity(title, 'ram')
+  const descriptionRam = numericCapacity(description, 'ram')
+  const titleStorage = numericCapacity(title, 'storage')
+  const descriptionStorage = numericCapacity(description, 'storage')
+  const ramGb = ramAspect ?? titleRam ?? descriptionRam
+  const storageGb = storageAspect ?? titleStorage ?? descriptionStorage
   const screenAspect = screenSize(findAspect(aspects, ['screen size', 'display size']))
   const screenInches = screenAspect ?? screenSize(fullText)
   const resolutionValue = findAspect(aspects, ['maximum resolution', 'resolution'])
@@ -127,8 +131,8 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const provenance = {
     cpu: aspectCpu ? 'aspect' as const : titleCpu ? 'title' as const : descriptionCpu ? 'description' as const : 'unknown' as const,
     gpu: aspectGpu && gpu ? 'aspect' as const : titleGpu && gpu ? 'title' as const : descriptionGpu && gpu ? 'description' as const : 'unknown' as const,
-    ram: ramAspect ? 'aspect' as const : ramGb ? 'title' as const : 'unknown' as const,
-    storage: storageAspect ? 'aspect' as const : storageGb ? 'title' as const : 'unknown' as const,
+    ram: ramAspect ? 'aspect' as const : titleRam ? 'title' as const : descriptionRam ? 'description' as const : 'unknown' as const,
+    storage: storageAspect ? 'aspect' as const : titleStorage ? 'title' as const : descriptionStorage ? 'description' as const : 'unknown' as const,
   }
 
   return {

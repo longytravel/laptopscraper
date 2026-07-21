@@ -87,7 +87,7 @@ export interface LaptopDataset {
   listingCount: number
   scoredCount: number
   needsCheckingCount: number
-  searchRuns: Array<{ searchTerm: string; returned: number; total: number; error?: string }>
+  searchRuns: Array<{ searchTerm: string; returned: number; total: number; error?: string; transient?: boolean }>
   listings: LaptopListing[]
 }
 

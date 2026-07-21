@@ -17,7 +17,7 @@ The reference machine is an ASUS ROG Strix G16 with an Intel Core i9-14900HX, RT
 
 ## Power model
 
-CPU and GPU model indices are versioned in `src/laptop/benchmarks.ts`, including source URL, observation date, metric and estimation method for every entry. The representative PassMark CPU Mark/G3D class indices are normalized against the current machine:
+CPU and GPU model indices are versioned in `src/laptop/benchmarks.ts`, including a model-specific source query/page, observation date, exact stored index and derivation method for every entry. GPU indices use the linked PassMark model pages; rounded CPU class estimates are explicitly marked as derived rather than presented as direct measurements. The indices are normalized against the current machine:
 
 ```text
 cpuPower = 100 × candidateCpuIndex / i9-14900HX index

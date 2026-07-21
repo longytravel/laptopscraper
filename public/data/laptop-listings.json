@@ -1,11 +1,11 @@
 {
   "generatedAt": "2026-07-21T19:09:32.395Z",
   "marketplaceId": "EBAY_GB",
-  "benchmarkVersion": "2026-07-passmark-class-index-v2",
+  "benchmarkVersion": "2026-07-passmark-class-index-v4",
   "rawCount": 615,
   "listingCount": 319,
-  "scoredCount": 157,
-  "needsCheckingCount": 272,
+  "scoredCount": 161,
+  "needsCheckingCount": 268,
   "searchRuns": [
     {
       "searchTerm": "RTX 5090 laptop",
@@ -78,7 +78,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|236951956606|0",
@@ -106,10 +106,10 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 116.2,
-      "gpuPower": 128.6,
-      "combinedPower": 121,
-      "valueIndex": 107.1,
-      "recommendationScore": 85,
+      "gpuPower": 111.3,
+      "combinedPower": 114.2,
+      "valueIndex": 101.1,
+      "recommendationScore": 82,
       "missingSpecs": [
         "storage"
       ]
@@ -133,7 +133,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|267705508159|0",
@@ -161,8 +161,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 116.2,
-      "gpuPower": 128.6,
-      "combinedPower": 121,
+      "gpuPower": 111.3,
+      "combinedPower": 114.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -216,8 +216,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 69.5,
-      "gpuPower": 128.6,
-      "combinedPower": 88.9,
+      "gpuPower": 111.3,
+      "combinedPower": 83.9,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -271,8 +271,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -325,8 +325,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -383,10 +383,10 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 117.1,
-      "combinedPower": 108.2,
-      "valueIndex": 108.3,
-      "recommendationScore": 80,
+      "gpuPower": 112.3,
+      "combinedPower": 106.4,
+      "valueIndex": 106.5,
+      "recommendationScore": 79,
       "missingSpecs": []
     },
     {
@@ -437,10 +437,10 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
-      "valueIndex": 113.2,
-      "recommendationScore": 78,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
+      "valueIndex": 111.2,
+      "recommendationScore": 77,
       "missingSpecs": [
         "RAM",
         "storage"
@@ -450,21 +450,21 @@
       "brand": "ASUS",
       "cpuModel": "AMD Ryzen 9 8940HX",
       "cpuManufacturer": "AMD",
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+      "gpuFamily": "RTX 50 series",
       "ramGb": 16,
       "storageGb": 1024,
       "screenInches": null,
       "resolution": null,
-      "vramGb": null,
+      "vramGb": 12,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
       "warnings": [],
-      "specConfidence": "low",
+      "specConfidence": "medium",
       "provenance": {
         "cpu": "description",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "title",
         "storage": "title"
       },
@@ -494,13 +494,11 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 116.2,
-      "gpuPower": null,
-      "combinedPower": null,
-      "valueIndex": null,
-      "recommendationScore": 12,
-      "missingSpecs": [
-        "GPU"
-      ]
+      "gpuPower": 131.9,
+      "combinedPower": 122.2,
+      "valueIndex": 86.9,
+      "recommendationScore": 68,
+      "missingSpecs": []
     },
     {
       "brand": "Alienware",
@@ -549,8 +547,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -606,10 +604,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
-      "valueIndex": 90.5,
-      "recommendationScore": 76,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
+      "valueIndex": 85,
+      "recommendationScore": 73,
       "missingSpecs": []
     },
     {
@@ -659,8 +657,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -716,8 +714,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -772,8 +770,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 109.4,
-      "gpuPower": 128.6,
-      "combinedPower": 116.7,
+      "gpuPower": 111.3,
+      "combinedPower": 110.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -802,7 +800,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|206409601945|0",
       "title": "MSI Gaming Laptop | I7-14650HX | RTX 5070 | 16GB RAM ",
@@ -828,8 +826,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -885,8 +883,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 154.3,
-      "combinedPower": 100.2,
+      "gpuPower": 131.9,
+      "combinedPower": 94.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -942,7 +940,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -999,8 +997,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -1057,8 +1055,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -1114,10 +1112,10 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 117.1,
-      "combinedPower": 108.2,
-      "valueIndex": 95.7,
-      "recommendationScore": 73,
+      "gpuPower": 112.3,
+      "combinedPower": 106.4,
+      "valueIndex": 94.1,
+      "recommendationScore": 72,
       "missingSpecs": []
     },
     {
@@ -1167,8 +1165,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 128.6,
-      "combinedPower": 96.6,
+      "gpuPower": 111.3,
+      "combinedPower": 91.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -1224,7 +1222,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -1280,7 +1278,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -1335,10 +1333,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
-      "valueIndex": 74.6,
-      "recommendationScore": 67,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
+      "valueIndex": 70.4,
+      "recommendationScore": 65,
       "missingSpecs": [
         "RAM"
       ]
@@ -1363,7 +1361,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|398000162576|0",
       "title": "MSI Vector A18 HX Gaming Laptop QHD+ Ryzen 9 9955HX 32GB 1TB RTX 5070Ti ",
@@ -1389,10 +1387,10 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 149.3,
-      "gpuPower": 154.3,
-      "combinedPower": 151.3,
-      "valueIndex": 85.8,
-      "recommendationScore": 67,
+      "gpuPower": 131.9,
+      "combinedPower": 142.1,
+      "valueIndex": 80.6,
+      "recommendationScore": 64,
       "missingSpecs": [
         "RAM"
       ]
@@ -1474,7 +1472,7 @@
         "cpu": "description",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|206395272619|0",
       "title": "MSI Gaming Laptop | RTX 5070 | I7- 14650HX | 16GB RAM ",
@@ -1500,8 +1498,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -1555,10 +1553,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 109.4,
-      "gpuPower": 154.3,
-      "combinedPower": 125.5,
-      "valueIndex": 94.3,
-      "recommendationScore": 66,
+      "gpuPower": 131.9,
+      "combinedPower": 117.9,
+      "valueIndex": 88.6,
+      "recommendationScore": 63,
       "missingSpecs": []
     },
     {
@@ -1608,8 +1606,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -1666,8 +1664,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 154.3,
-      "combinedPower": 154,
+      "gpuPower": 131.9,
+      "combinedPower": 144.6,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -1722,8 +1720,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 127.6,
-      "gpuPower": 162.9,
-      "combinedPower": 140.7,
+      "gpuPower": 155.5,
+      "combinedPower": 138.1,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -1778,8 +1776,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -1832,8 +1830,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 149.3,
-      "gpuPower": 154.3,
-      "combinedPower": 151.3,
+      "gpuPower": 131.9,
+      "combinedPower": 142.1,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -1888,10 +1886,10 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 66.1,
-      "gpuPower": 117.1,
-      "combinedPower": 83.1,
-      "valueIndex": 92.7,
-      "recommendationScore": 71,
+      "gpuPower": 112.3,
+      "combinedPower": 81.7,
+      "valueIndex": 91.1,
+      "recommendationScore": 70,
       "missingSpecs": []
     },
     {
@@ -1941,7 +1939,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -2000,7 +1998,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -2057,7 +2055,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 14,
@@ -2113,8 +2111,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 149.3,
-      "gpuPower": 154.3,
-      "combinedPower": 151.3,
+      "gpuPower": 131.9,
+      "combinedPower": 142.1,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2170,8 +2168,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2225,8 +2223,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -2255,7 +2253,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|278196807664|0",
       "title": "NEW Alienware 16 Area-51 Ultra 9 275HX RTX 5070 16GB 1TB QHD 240Hz Gaming Laptop",
@@ -2282,8 +2280,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -2338,8 +2336,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 149.3,
-      "gpuPower": 154.3,
-      "combinedPower": 151.3,
+      "gpuPower": 131.9,
+      "combinedPower": 142.1,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2392,8 +2390,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 149.3,
-      "gpuPower": 154.3,
-      "combinedPower": 151.3,
+      "gpuPower": 131.9,
+      "combinedPower": 142.1,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2446,8 +2444,8 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 145.7,
-      "combinedPower": 116.2,
+      "gpuPower": 142.5,
+      "combinedPower": 115.2,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -2476,7 +2474,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|366542872196|0",
       "title": "NEW! RTX5070 15.6\" MSI Katana 15 HX Laptop, 165Hz 2.5k, i9 14900HX, 16GB, 1TB",
@@ -2503,8 +2501,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 128.6,
-      "combinedPower": 110.6,
+      "gpuPower": 111.3,
+      "combinedPower": 104.4,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -2558,8 +2556,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 116.2,
-      "gpuPower": 154.3,
-      "combinedPower": 130.2,
+      "gpuPower": 131.9,
+      "combinedPower": 122.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2614,7 +2612,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -2671,8 +2669,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2700,7 +2698,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|287342415338|0",
@@ -2727,7 +2725,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -2783,8 +2781,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2839,7 +2837,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -2896,8 +2894,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -2953,8 +2951,8 @@
         "RTX 4060 i9 laptop"
       ],
       "cpuPower": 77.5,
-      "gpuPower": 145.7,
-      "combinedPower": 99.8,
+      "gpuPower": 142.5,
+      "combinedPower": 98.9,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -3010,8 +3008,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 117.1,
-      "combinedPower": 110.7,
+      "gpuPower": 112.3,
+      "combinedPower": 108.9,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -3064,10 +3062,10 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 145.7,
-      "combinedPower": 120.9,
-      "valueIndex": 92.7,
-      "recommendationScore": 67,
+      "gpuPower": 142.5,
+      "combinedPower": 119.8,
+      "valueIndex": 91.8,
+      "recommendationScore": 66,
       "missingSpecs": [
         "RAM"
       ]
@@ -3118,8 +3116,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 128.6,
-      "combinedPower": 126.4,
+      "gpuPower": 111.3,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -3173,8 +3171,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3227,8 +3225,8 @@
         "RTX 5090 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 200,
-      "combinedPower": 150.8,
+      "gpuPower": 165.5,
+      "combinedPower": 139.8,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3283,8 +3281,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3337,8 +3335,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3393,8 +3391,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 117.1,
-      "combinedPower": 108.2,
+      "gpuPower": 112.3,
+      "combinedPower": 106.4,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -3447,8 +3445,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3459,23 +3457,23 @@
       "brand": null,
       "cpuModel": "AMD Ryzen 9 9955HX3D",
       "cpuManufacturer": "AMD",
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 5080 Laptop GPU",
+      "gpuFamily": "RTX 50 series",
       "ramGb": 32,
       "storageGb": 2048,
       "screenInches": 16,
       "resolution": "QHD",
-      "vramGb": null,
+      "vramGb": 16,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
       "warnings": [],
-      "specConfidence": "low",
+      "specConfidence": "medium",
       "provenance": {
         "cpu": "description",
-        "gpu": "unknown",
-        "ram": "title",
-        "storage": "title"
+        "gpu": "description",
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|137502104263|0",
       "title": "PCSpecialist Recoil 16 Gaming Laptop–16\" AMD Ryzen9 GeForce 5080 16 GB 32GB 2TB",
@@ -3501,13 +3499,11 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": null,
-      "combinedPower": null,
-      "valueIndex": null,
-      "recommendationScore": 18,
-      "missingSpecs": [
-        "GPU"
-      ]
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
+      "valueIndex": 58.5,
+      "recommendationScore": 58,
+      "missingSpecs": []
     },
     {
       "brand": "Lenovo",
@@ -3555,8 +3551,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3612,9 +3608,9 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 145.7,
-      "combinedPower": 116.2,
-      "valueIndex": 82,
+      "gpuPower": 142.5,
+      "combinedPower": 115.2,
+      "valueIndex": 81.3,
       "recommendationScore": 65,
       "missingSpecs": [
         "RAM",
@@ -3667,8 +3663,8 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 145.7,
-      "combinedPower": 120.9,
+      "gpuPower": 142.5,
+      "combinedPower": 119.8,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -3723,8 +3719,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -3779,8 +3775,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3833,7 +3829,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -3890,8 +3886,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3944,8 +3940,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -3971,7 +3967,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "description",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|227334658470|526618768585",
@@ -3998,7 +3994,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -4055,9 +4051,9 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 117.1,
-      "combinedPower": 108.2,
-      "valueIndex": 87.9,
+      "gpuPower": 112.3,
+      "combinedPower": 106.4,
+      "valueIndex": 86.4,
       "recommendationScore": 64,
       "missingSpecs": []
     },
@@ -4080,8 +4076,8 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|236906086933|0",
       "title": "Lenovo Legion Pro 5 Ultra 9 275HX 32GB 1 TB RTX 5070 Ti (12GB) Warranty Feb 2029",
@@ -4107,8 +4103,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -4135,7 +4131,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|358798886628|0",
       "title": "🔥MSI Vector 16 HX AI 16\"Ultra 9 275HX RTX 5080 32GB 1TB QHD+240Hz Gaming Laptop",
@@ -4162,8 +4158,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -4191,7 +4187,7 @@
         "cpu": "description",
         "gpu": "description",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|147290236840|0",
       "title": "Acer Predator Helios Neo 18 Gaming Laptop",
@@ -4218,10 +4214,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 84.3,
-      "gpuPower": 117.1,
-      "combinedPower": 96.1,
-      "valueIndex": 77.7,
-      "recommendationScore": 63,
+      "gpuPower": 112.3,
+      "combinedPower": 94.5,
+      "valueIndex": 76.4,
+      "recommendationScore": 62,
       "missingSpecs": [
         "RAM"
       ]
@@ -4272,8 +4268,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4327,8 +4323,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4381,8 +4377,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4438,8 +4434,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4493,8 +4489,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4522,7 +4518,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|358807476266|0",
       "title": "Gigabyte Aorus 17H 17.3\" i7 13700H RTX 4080 16GB 1TB FHD 360Hz Gaming Laptop",
@@ -4549,9 +4545,9 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 63.8,
-      "gpuPower": 145.7,
-      "combinedPower": 88.8,
-      "valueIndex": 77.1,
+      "gpuPower": 142.5,
+      "combinedPower": 88,
+      "valueIndex": 76.4,
       "recommendationScore": 62,
       "missingSpecs": [
         "RAM"
@@ -4605,9 +4601,9 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
-      "valueIndex": 76.8,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
+      "valueIndex": 75.5,
       "recommendationScore": 62,
       "missingSpecs": [
         "RAM"
@@ -4660,8 +4656,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4689,8 +4685,8 @@
       "provenance": {
         "cpu": "description",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|318297865938|0",
       "title": "Stormforce ExoBook 16\" RTX 5070 Ti Ultra Gaming Laptop 2TB, 32GB",
@@ -4717,10 +4713,10 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
-      "valueIndex": 77.1,
-      "recommendationScore": 62,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
+      "valueIndex": 72.4,
+      "recommendationScore": 60,
       "missingSpecs": []
     },
     {
@@ -4742,7 +4738,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|198473191674|0",
@@ -4770,10 +4766,10 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 116.2,
-      "gpuPower": 180,
-      "combinedPower": 138.4,
-      "valueIndex": 72,
-      "recommendationScore": 56,
+      "gpuPower": 152.4,
+      "combinedPower": 129.5,
+      "valueIndex": 67.4,
+      "recommendationScore": 53,
       "missingSpecs": []
     },
     {
@@ -4823,7 +4819,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -4880,8 +4876,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4934,8 +4930,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -4988,8 +4984,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5042,8 +5038,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 153.8,
-      "gpuPower": 180,
-      "combinedPower": 163.8,
+      "gpuPower": 152.4,
+      "combinedPower": 153.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5096,9 +5092,9 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 77.5,
-      "gpuPower": 145.7,
-      "combinedPower": 99.8,
-      "valueIndex": 82.3,
+      "gpuPower": 142.5,
+      "combinedPower": 98.9,
+      "valueIndex": 81.5,
       "recommendationScore": 61,
       "missingSpecs": []
     },
@@ -5106,21 +5102,21 @@
       "brand": "HP",
       "cpuModel": "Intel Core i7-13700HX",
       "cpuManufacturer": "Intel",
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 4080 Laptop GPU",
+      "gpuFamily": "RTX 40 series",
       "ramGb": 32,
       "storageGb": 1024,
       "screenInches": 16,
       "resolution": "QHD",
-      "vramGb": null,
+      "vramGb": 12,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
       "warnings": [],
-      "specConfidence": "low",
+      "specConfidence": "medium",
       "provenance": {
         "cpu": "title",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "title",
         "storage": "title"
       },
@@ -5148,13 +5144,11 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 70.6,
-      "gpuPower": null,
-      "combinedPower": null,
-      "valueIndex": null,
-      "recommendationScore": 12,
-      "missingSpecs": [
-        "GPU"
-      ]
+      "gpuPower": 142.5,
+      "combinedPower": 93.5,
+      "valueIndex": 74.1,
+      "recommendationScore": 61,
+      "missingSpecs": []
     },
     {
       "brand": "MSI",
@@ -5203,10 +5197,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
-      "valueIndex": 63.3,
-      "recommendationScore": 55,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
+      "valueIndex": 59.7,
+      "recommendationScore": 53,
       "missingSpecs": []
     },
     {
@@ -5255,8 +5249,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 128.6,
-      "combinedPower": 96.6,
+      "gpuPower": 111.3,
+      "combinedPower": 91.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5312,8 +5306,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -5366,7 +5360,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -5424,8 +5418,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5480,8 +5474,8 @@
         "RTX 5090 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 200,
-      "combinedPower": 150.8,
+      "gpuPower": 165.5,
+      "combinedPower": 139.8,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5535,8 +5529,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 117.1,
-      "combinedPower": 108.2,
+      "gpuPower": 112.3,
+      "combinedPower": 106.4,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -5590,8 +5584,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 154.3,
-      "combinedPower": 100.2,
+      "gpuPower": 131.9,
+      "combinedPower": 94.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5647,8 +5641,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 154.3,
-      "combinedPower": 109.9,
+      "gpuPower": 131.9,
+      "combinedPower": 103.3,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5703,8 +5697,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -5757,7 +5751,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -5812,7 +5806,7 @@
         "RTX 5090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 200,
+      "gpuPower": 165.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -5869,10 +5863,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 77.5,
-      "gpuPower": 128.6,
-      "combinedPower": 94.9,
-      "valueIndex": 60.8,
-      "recommendationScore": 53,
+      "gpuPower": 111.3,
+      "combinedPower": 89.6,
+      "valueIndex": 57.4,
+      "recommendationScore": 52,
       "missingSpecs": []
     },
     {
@@ -5894,7 +5888,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|267731616004|0",
@@ -5922,8 +5916,8 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 145.7,
-      "combinedPower": 118.1,
+      "gpuPower": 142.5,
+      "combinedPower": 117,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -5977,7 +5971,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -6035,10 +6029,10 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 124.2,
-      "gpuPower": 162.9,
-      "combinedPower": 138.4,
-      "valueIndex": 67.2,
-      "recommendationScore": 53,
+      "gpuPower": 155.5,
+      "combinedPower": 135.9,
+      "valueIndex": 66,
+      "recommendationScore": 52,
       "missingSpecs": [
         "RAM",
         "storage"
@@ -6091,8 +6085,8 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -6148,8 +6142,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -6204,7 +6198,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -6261,8 +6255,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -6316,7 +6310,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -6371,7 +6365,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -6399,7 +6393,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|800074681806|0",
@@ -6426,9 +6420,9 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 70.6,
-      "gpuPower": 145.7,
-      "combinedPower": 94.3,
-      "valueIndex": 76.6,
+      "gpuPower": 142.5,
+      "combinedPower": 93.5,
+      "valueIndex": 76,
       "recommendationScore": 58,
       "missingSpecs": []
     },
@@ -6480,10 +6474,10 @@
         "RTX 4060 i9 laptop"
       ],
       "cpuPower": 102.6,
-      "gpuPower": 145.7,
-      "combinedPower": 118.1,
-      "valueIndex": 75.7,
-      "recommendationScore": 58,
+      "gpuPower": 142.5,
+      "combinedPower": 117,
+      "valueIndex": 75,
+      "recommendationScore": 57,
       "missingSpecs": []
     },
     {
@@ -6533,8 +6527,8 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 145.7,
-      "combinedPower": 116.2,
+      "gpuPower": 142.5,
+      "combinedPower": 115.2,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -6588,7 +6582,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -6618,7 +6612,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|188645175734|0",
       "title": "MSI Vector 16 HX AI 16\" Gaming Laptop Core Ultra 9 275HX 32GB 1TB RTX 5080",
@@ -6645,8 +6639,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -6702,8 +6696,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -6759,8 +6753,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -6814,7 +6808,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -6871,10 +6865,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 128.6,
-      "combinedPower": 102.2,
-      "valueIndex": 64.5,
-      "recommendationScore": 51,
+      "gpuPower": 111.3,
+      "combinedPower": 96.5,
+      "valueIndex": 60.9,
+      "recommendationScore": 49,
       "missingSpecs": [
         "RAM",
         "storage"
@@ -6899,7 +6893,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|168540712592|0",
@@ -6927,8 +6921,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -6955,7 +6949,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|307054254368|0",
@@ -6984,8 +6978,8 @@
         "RTX 4060 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 145.7,
-      "combinedPower": 116.2,
+      "gpuPower": 142.5,
+      "combinedPower": 115.2,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -7039,10 +7033,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
-      "valueIndex": 44.8,
-      "recommendationScore": 51,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
+      "valueIndex": 42.1,
+      "recommendationScore": 49,
       "missingSpecs": [
         "RAM"
       ]
@@ -7095,7 +7089,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -7153,8 +7147,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7209,8 +7203,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 180,
-      "combinedPower": 116.9,
+      "gpuPower": 152.4,
+      "combinedPower": 109.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7237,7 +7231,7 @@
       "provenance": {
         "cpu": "description",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|398093513919|0",
@@ -7265,10 +7259,10 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
-      "valueIndex": 68.9,
-      "recommendationScore": 50,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
+      "valueIndex": 64.7,
+      "recommendationScore": 48,
       "missingSpecs": [
         "storage"
       ]
@@ -7319,8 +7313,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.5,
-      "gpuPower": 162.9,
-      "combinedPower": 95.2,
+      "gpuPower": 155.5,
+      "combinedPower": 93.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7375,8 +7369,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 180,
-      "combinedPower": 106.6,
+      "gpuPower": 152.4,
+      "combinedPower": 99.8,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7432,10 +7426,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 117.1,
-      "combinedPower": 89.8,
-      "valueIndex": 85.6,
-      "recommendationScore": 55,
+      "gpuPower": 112.3,
+      "combinedPower": 88.3,
+      "valueIndex": 84.2,
+      "recommendationScore": 54,
       "missingSpecs": [
         "RAM"
       ]
@@ -7459,7 +7453,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|318414614638|0",
@@ -7486,8 +7480,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -7514,8 +7508,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|336579213088|0",
       "title": "HP OMEN MAX 16 Gaming Laptop RTX 5070 Ti 12GB Ryzen AI 9 | 32GB | 1TB RRP £2350",
@@ -7544,7 +7538,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -7599,8 +7593,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
       "valueIndex": null,
       "recommendationScore": 18,
       "missingSpecs": [
@@ -7653,8 +7647,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7709,8 +7703,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7765,8 +7759,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 135.4,
-      "gpuPower": 180,
-      "combinedPower": 151.7,
+      "gpuPower": 152.4,
+      "combinedPower": 142,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -7820,8 +7814,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 57,
-      "gpuPower": 117.1,
-      "combinedPower": 76,
+      "gpuPower": 112.3,
+      "combinedPower": 74.8,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -7848,7 +7842,7 @@
         "cpu": "description",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|366520727460|0",
       "title": "RTX 4080, I7 14th gen, 64GB Ram, 2Tb,240hz QHD+, MSI Vector 16 HX  + LLano V13",
@@ -7875,8 +7869,8 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 145.7,
-      "combinedPower": 98,
+      "gpuPower": 142.5,
+      "combinedPower": 97.1,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -7929,10 +7923,10 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
-      "valueIndex": 58.4,
-      "recommendationScore": 48,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
+      "valueIndex": 54.6,
+      "recommendationScore": 46,
       "missingSpecs": []
     },
     {
@@ -7981,8 +7975,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 57,
-      "gpuPower": 117.1,
-      "combinedPower": 76,
+      "gpuPower": 112.3,
+      "combinedPower": 74.8,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -8040,8 +8034,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
       "valueIndex": null,
       "recommendationScore": 13,
       "missingSpecs": [
@@ -8097,8 +8091,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -8151,8 +8145,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -8207,8 +8201,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -8261,8 +8255,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 83.2,
-      "gpuPower": 180,
-      "combinedPower": 113.3,
+      "gpuPower": 152.4,
+      "combinedPower": 106,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -8317,8 +8311,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.5,
-      "gpuPower": 117.1,
-      "combinedPower": 83.4,
+      "gpuPower": 112.3,
+      "combinedPower": 82,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -8372,8 +8366,8 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": 68.4,
-      "gpuPower": 145.7,
-      "combinedPower": 92.6,
+      "gpuPower": 142.5,
+      "combinedPower": 91.7,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -8429,7 +8423,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -8460,7 +8454,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|168414009220|0",
       "title": "Alienware 18 Area-51 Intel Core Ultra 9 275HX NVIDIA RTX 5070 Ti 12 GB 32GB 2TB",
@@ -8487,10 +8481,10 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 154.3,
-      "combinedPower": 135.9,
-      "valueIndex": 55.4,
-      "recommendationScore": 46,
+      "gpuPower": 131.9,
+      "combinedPower": 127.7,
+      "valueIndex": 52.1,
+      "recommendationScore": 45,
       "missingSpecs": [
         "RAM"
       ]
@@ -8541,8 +8535,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 180,
-      "combinedPower": 116.9,
+      "gpuPower": 152.4,
+      "combinedPower": 109.4,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -8570,8 +8564,8 @@
       "provenance": {
         "cpu": "description",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|298417960040|0",
       "title": "ASUS ProArt P16 H7606 - RTX 5080 Ryzen AI 9 HX - 64GB 2TB - Black - Excellent",
@@ -8597,8 +8591,8 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -8624,7 +8618,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|318571097651|0",
@@ -8651,10 +8645,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
-      "valueIndex": 63.5,
-      "recommendationScore": 51,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
+      "valueIndex": 62.3,
+      "recommendationScore": 50,
       "missingSpecs": [
         "storage"
       ]
@@ -8705,7 +8699,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 14,
@@ -8761,10 +8755,10 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 180,
-      "combinedPower": 116.9,
-      "valueIndex": 45.3,
-      "recommendationScore": 45,
+      "gpuPower": 152.4,
+      "combinedPower": 109.4,
+      "valueIndex": 42.4,
+      "recommendationScore": 43,
       "missingSpecs": []
     },
     {
@@ -8815,9 +8809,9 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 145.7,
-      "combinedPower": 116.2,
-      "valueIndex": 74.5,
+      "gpuPower": 142.5,
+      "combinedPower": 115.2,
+      "valueIndex": 73.9,
       "recommendationScore": 50,
       "missingSpecs": []
     },
@@ -8868,10 +8862,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 70.6,
-      "gpuPower": 117.1,
-      "combinedPower": 86.4,
-      "valueIndex": 54.2,
-      "recommendationScore": 50,
+      "gpuPower": 112.3,
+      "combinedPower": 85,
+      "valueIndex": 53.3,
+      "recommendationScore": 49,
       "missingSpecs": []
     },
     {
@@ -8893,7 +8887,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|127920629899|0",
@@ -8923,7 +8917,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -8936,21 +8930,21 @@
       "brand": "Razer",
       "cpuModel": "Intel Core i9-14900HX",
       "cpuManufacturer": "Intel",
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 4090 Laptop GPU",
+      "gpuFamily": "RTX 40 series",
       "ramGb": 32,
       "storageGb": null,
       "screenInches": 16,
       "resolution": "QHD",
-      "vramGb": null,
+      "vramGb": 16,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
       "warnings": [],
-      "specConfidence": "low",
+      "specConfidence": "medium",
       "provenance": {
         "cpu": "title",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "title",
         "storage": "unknown"
       },
@@ -8979,12 +8973,11 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": null,
-      "combinedPower": null,
-      "valueIndex": null,
-      "recommendationScore": 12,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 54,
+      "recommendationScore": 50,
       "missingSpecs": [
-        "GPU",
         "storage"
       ]
     },
@@ -9035,8 +9028,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9090,9 +9083,9 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 60.2,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 59.1,
       "recommendationScore": 49,
       "missingSpecs": [
         "RAM",
@@ -9145,8 +9138,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9200,8 +9193,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9254,8 +9247,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9308,8 +9301,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 117.1,
-      "combinedPower": 93,
+      "gpuPower": 112.3,
+      "combinedPower": 91.5,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9363,8 +9356,8 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 154.3,
-      "combinedPower": 103.9,
+      "gpuPower": 131.9,
+      "combinedPower": 97.6,
       "valueIndex": null,
       "recommendationScore": 26,
       "missingSpecs": [
@@ -9393,7 +9386,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|298487033867|0",
       "title": "ASUS ProArt P16 Ryzen AI 9 HX 370 RTX 5080 64GB 2TB 4K OLED Touch Laptop NEW",
@@ -9420,10 +9413,10 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 180,
-      "combinedPower": 110.5,
-      "valueIndex": 39.2,
-      "recommendationScore": 42,
+      "gpuPower": 152.4,
+      "combinedPower": 103.4,
+      "valueIndex": 36.6,
+      "recommendationScore": 40,
       "missingSpecs": [
         "RAM"
       ]
@@ -9475,8 +9468,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.5,
-      "gpuPower": 117.1,
-      "combinedPower": 83.4,
+      "gpuPower": 112.3,
+      "combinedPower": 82,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9504,7 +9497,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|318568537395|0",
       "title": "Alienware M18 32 Core i9-14900HX RTX 4090 32GB 2K 165HZ 18\" Gaming Laptop",
@@ -9530,10 +9523,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 55.5,
-      "recommendationScore": 47,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 54.5,
+      "recommendationScore": 46,
       "missingSpecs": [
         "RAM"
       ]
@@ -9584,8 +9577,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 106.7,
-      "gpuPower": 162.9,
-      "combinedPower": 126.4,
+      "gpuPower": 155.5,
+      "combinedPower": 124,
       "valueIndex": null,
       "recommendationScore": 16,
       "missingSpecs": [
@@ -9639,10 +9632,10 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": 124.9,
-      "gpuPower": 180,
-      "combinedPower": 144.6,
-      "valueIndex": 59.8,
-      "recommendationScore": 41,
+      "gpuPower": 152.4,
+      "combinedPower": 135.2,
+      "valueIndex": 55.9,
+      "recommendationScore": 39,
       "missingSpecs": [
         "RAM"
       ]
@@ -9666,7 +9659,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|358754818408|0",
@@ -9693,8 +9686,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.1,
-      "gpuPower": 162.9,
-      "combinedPower": 94.8,
+      "gpuPower": 155.5,
+      "combinedPower": 93.1,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -9750,7 +9743,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -9809,7 +9802,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -9863,10 +9856,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 44.7,
-      "recommendationScore": 45,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 43.8,
+      "recommendationScore": 44,
       "missingSpecs": [
         "RAM",
         "storage"
@@ -9918,7 +9911,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -9974,8 +9967,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 103.7,
-      "gpuPower": 162.9,
-      "combinedPower": 124.2,
+      "gpuPower": 155.5,
+      "combinedPower": 121.9,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -10032,8 +10025,8 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 66.1,
-      "gpuPower": 117.1,
-      "combinedPower": 83.1,
+      "gpuPower": 112.3,
+      "combinedPower": 81.7,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -10087,10 +10080,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 41.4,
-      "recommendationScore": 43,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 40.7,
+      "recommendationScore": 42,
       "missingSpecs": []
     },
     {
@@ -10140,10 +10133,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 75.2,
-      "gpuPower": 128.6,
-      "combinedPower": 93.2,
-      "valueIndex": 47.4,
-      "recommendationScore": 42,
+      "gpuPower": 111.3,
+      "combinedPower": 88,
+      "valueIndex": 44.7,
+      "recommendationScore": 41,
       "missingSpecs": []
     },
     {
@@ -10192,8 +10185,8 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.1,
-      "gpuPower": 162.9,
-      "combinedPower": 94.8,
+      "gpuPower": 155.5,
+      "combinedPower": 93.1,
       "valueIndex": null,
       "recommendationScore": 20,
       "missingSpecs": [
@@ -10248,9 +10241,9 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 47.5,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 46.6,
       "recommendationScore": 42,
       "missingSpecs": []
     },
@@ -10302,10 +10295,10 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": 87.7,
-      "gpuPower": 154.3,
-      "combinedPower": 109.9,
-      "valueIndex": 49.4,
-      "recommendationScore": 35,
+      "gpuPower": 131.9,
+      "combinedPower": 103.3,
+      "valueIndex": 46.5,
+      "recommendationScore": 34,
       "missingSpecs": [
         "RAM",
         "storage"
@@ -10331,7 +10324,7 @@
         "cpu": "title",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|117246364490|0",
       "title": "MSI Stealth A18 AI+ A3XWJG-006US Ryzen AI 9 HX 370 RTX 5090 64GB 2TB",
@@ -10357,10 +10350,10 @@
         "RTX 5090 laptop"
       ],
       "cpuPower": 79.8,
-      "gpuPower": 200,
-      "combinedPower": 115.2,
-      "valueIndex": 45.1,
-      "recommendationScore": 33,
+      "gpuPower": 165.5,
+      "combinedPower": 106.8,
+      "valueIndex": 41.8,
+      "recommendationScore": 31,
       "missingSpecs": [
         "RAM"
       ]
@@ -10384,7 +10377,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|236938363261|0",
@@ -10413,10 +10406,10 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 117.1,
-      "combinedPower": 106.5,
-      "valueIndex": 41.2,
-      "recommendationScore": 39,
+      "gpuPower": 112.3,
+      "combinedPower": 104.7,
+      "valueIndex": 40.5,
+      "recommendationScore": 38,
       "missingSpecs": [
         "storage"
       ]
@@ -10440,8 +10433,8 @@
       "provenance": {
         "cpu": "description",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|358447101066|0",
       "title": "ASUS ROG Zephyrus Duo 16 Laptop NVIDIA GeForce RTX 4090 64GB 2TB  ",
@@ -10468,10 +10461,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 124.2,
-      "gpuPower": 162.9,
-      "combinedPower": 138.4,
-      "valueIndex": 52.6,
-      "recommendationScore": 37,
+      "gpuPower": 155.5,
+      "combinedPower": 135.9,
+      "valueIndex": 51.7,
+      "recommendationScore": 36,
       "missingSpecs": []
     },
     {
@@ -10493,8 +10486,8 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|358815102599|0",
       "title": "🔥 PCSpecialist Gaming Laptop – RTX 4090 | i9-14900HX | 64GB DDR5 | 4TB Samsung",
@@ -10521,9 +10514,9 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 100,
-      "gpuPower": 162.9,
-      "combinedPower": 121.6,
-      "valueIndex": 50.9,
+      "gpuPower": 155.5,
+      "combinedPower": 119.3,
+      "valueIndex": 50,
       "recommendationScore": 36,
       "missingSpecs": []
     },
@@ -10629,7 +10622,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10659,7 +10652,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|267732275273|0",
@@ -10686,7 +10679,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10742,7 +10735,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10769,8 +10762,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|327261620530|0",
       "title": "PCSpecialist Recoil 16 RTX 5070 Ti - Core Ultra 9 - 32GB - 1TB",
@@ -10797,7 +10790,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10853,7 +10846,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10907,7 +10900,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -10963,7 +10956,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11020,7 +11013,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11078,7 +11071,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11135,7 +11128,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11192,7 +11185,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11247,7 +11240,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11416,7 +11409,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11502,8 +11495,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|227365269892|526566381698",
       "title": "HP OMEN Max 16 Gaming Laptop Intel U9-275HX RTX 5080 64GB 8TB 16\"WQXGA White",
@@ -11529,7 +11522,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11641,7 +11634,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11698,7 +11691,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11755,7 +11748,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -11983,7 +11976,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12040,7 +12033,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12097,7 +12090,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12154,7 +12147,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12325,7 +12318,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12438,7 +12431,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12552,7 +12545,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12608,7 +12601,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12665,7 +12658,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12720,7 +12713,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12775,7 +12768,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12830,7 +12823,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12885,7 +12878,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -12940,7 +12933,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -13052,7 +13045,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 18,
@@ -13111,7 +13104,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 111.4,
+      "gpuPower": 98.7,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -13168,7 +13161,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -13225,7 +13218,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 14,
@@ -13281,7 +13274,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 14,
@@ -13511,7 +13504,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -13541,7 +13534,7 @@
         "cpu": "unknown",
         "gpu": "unknown",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|236829038685|0",
       "title": "Samsung Galaxy Book4 Ultra Laptop 16 inch Core Ultra 9 32GB RAM 1TB Used C Grade",
@@ -13623,7 +13616,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -13682,7 +13675,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -13736,7 +13729,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -13851,7 +13844,7 @@
         "RTX 4060 i9 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -13936,7 +13929,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|206393567285|0",
       "title": " MSI Vector GP68 HX 12v Gaming laptop/ RTX 4080 /i9-12900x /32gb ram /144hz",
@@ -13962,7 +13955,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14017,7 +14010,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14072,7 +14065,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14130,7 +14123,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14186,7 +14179,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14243,7 +14236,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14274,7 +14267,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|398156379541|0",
       "title": "i9 275hx, RTX 5070Ti, RECOIL 16 SUPREME, 32gb ram, 1TB",
@@ -14300,7 +14293,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14328,7 +14321,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|127984385739|0",
       "title": "lenovo legion pro 7 rtx 4080 16IRX9H",
@@ -14355,7 +14348,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14412,7 +14405,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14469,7 +14462,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14500,7 +14493,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|397988839659|0",
       "title": "i9 275hx, RTX 5070Ti, RECOIL SUPREME",
@@ -14526,7 +14519,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14582,7 +14575,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14666,7 +14659,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|127905674523|0",
       "title": "Alienware 16 Area-51   RTX5070ti / Intel 9 275HX / 64GB RAM",
@@ -14692,7 +14685,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14746,7 +14739,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14776,7 +14769,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|188631076659|0",
@@ -14804,7 +14797,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14860,7 +14853,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14916,7 +14909,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -14973,7 +14966,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -15029,7 +15022,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -15197,7 +15190,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -15227,7 +15220,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|188634025722|0",
       "title": "Lenovo Legion Pro 7i 16IAX10H intel core U9 275HX RTX 5090 32GB 1TB 240Hz OLED",
@@ -15254,7 +15247,7 @@
         "RTX 5090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 200,
+      "gpuPower": 165.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 12,
@@ -15284,7 +15277,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "unknown"
       },
       "id": "v1|358795009251|0",
@@ -15311,7 +15304,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 11,
@@ -15426,7 +15419,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 111.4,
+      "gpuPower": 98.7,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15482,7 +15475,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 111.4,
+      "gpuPower": 98.7,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15538,7 +15531,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15594,7 +15587,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15622,7 +15615,7 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|398157148277|0",
@@ -15650,7 +15643,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15679,7 +15672,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "title",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|227426180478|0",
       "title": "Alienware M16 R2 Ultra7 Laptop 32GB RAM, RTX 4070 240HZ screen",
@@ -15706,7 +15699,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15718,13 +15711,13 @@
       "brand": "HP",
       "cpuModel": null,
       "cpuManufacturer": null,
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 4070 Laptop GPU",
+      "gpuFamily": "RTX 40 series",
       "ramGb": null,
       "storageGb": null,
       "screenInches": null,
       "resolution": null,
-      "vramGb": null,
+      "vramGb": 8,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
@@ -15732,7 +15725,7 @@
       "specConfidence": "low",
       "provenance": {
         "cpu": "unknown",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "unknown",
         "storage": "unknown"
       },
@@ -15761,13 +15754,12 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": null,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
       "missingSpecs": [
         "CPU",
-        "GPU",
         "RAM",
         "storage"
       ]
@@ -15776,13 +15768,13 @@
       "brand": "HP",
       "cpuModel": null,
       "cpuManufacturer": null,
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 5070 Laptop GPU",
+      "gpuFamily": "RTX 50 series",
       "ramGb": 24,
       "storageGb": null,
       "screenInches": 16,
       "resolution": null,
-      "vramGb": null,
+      "vramGb": 8,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
@@ -15790,7 +15782,7 @@
       "specConfidence": "low",
       "provenance": {
         "cpu": "unknown",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "title",
         "storage": "unknown"
       },
@@ -15820,13 +15812,12 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": null,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
       "missingSpecs": [
         "CPU",
-        "GPU",
         "storage"
       ]
     },
@@ -15849,7 +15840,7 @@
       "provenance": {
         "cpu": "title",
         "gpu": "title",
-        "ram": "title",
+        "ram": "description",
         "storage": "title"
       },
       "id": "v1|227337133879|0",
@@ -15877,10 +15868,10 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": 66.5,
-      "gpuPower": 117.1,
-      "combinedPower": 83.4,
-      "valueIndex": 68.4,
-      "recommendationScore": 8,
+      "gpuPower": 112.3,
+      "combinedPower": 82,
+      "valueIndex": 67.2,
+      "recommendationScore": 7,
       "missingSpecs": []
     },
     {
@@ -15903,7 +15894,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|377219588090|0",
       "title": "Acer Predator Helios RTX5070 NEO 16 AI Laptop, 16 Inch Ultra 7 255hz 16GB 1TB ",
@@ -15929,7 +15920,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -15986,7 +15977,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16042,7 +16033,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16127,8 +16118,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|168181627378|0",
       "title": "Legion Pro 5 16ADR10 Gaming Laptop - GeForce RTX 5070 - AMD Ryzen 9 - 32 GB 1TB",
@@ -16156,7 +16147,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16183,8 +16174,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|318569446558|0",
       "title": "Alienware X16 Gaming Laptop Intel I9 13th Gen, NVIDIA RTX4070, 32GB, 2TB, 165Hz",
@@ -16212,7 +16203,7 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16267,7 +16258,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16381,7 +16372,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16436,7 +16427,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16464,8 +16455,8 @@
       "provenance": {
         "cpu": "unknown",
         "gpu": "title",
-        "ram": "title",
-        "storage": "title"
+        "ram": "description",
+        "storage": "description"
       },
       "id": "v1|227372740529|0",
       "title": "ASUS ROG Zephyrus Duo 16 GX650PY RTX 4090 Ryzen 9 32GB 1TB Gaming Laptop UK",
@@ -16493,7 +16484,7 @@
         "Ryzen 9 RTX gaming laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16548,7 +16539,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16605,7 +16596,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16659,7 +16650,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16716,7 +16707,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16773,7 +16764,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16829,7 +16820,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16885,7 +16876,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -16914,7 +16905,7 @@
         "cpu": "unknown",
         "gpu": "title",
         "ram": "unknown",
-        "storage": "title"
+        "storage": "description"
       },
       "id": "v1|398029492954|0",
       "title": "ASUS ROG Zephyrus G14 HX 370 32GB 2TB RTX 5070 Ti 14\" OLED + extra power brick",
@@ -16940,7 +16931,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -17054,7 +17045,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -17111,7 +17102,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -17223,7 +17214,7 @@
         "RTX 5070 Ti laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -17235,13 +17226,13 @@
       "brand": null,
       "cpuModel": null,
       "cpuManufacturer": null,
-      "gpuModel": null,
-      "gpuFamily": null,
+      "gpuModel": "NVIDIA GeForce RTX 5080 Laptop GPU",
+      "gpuFamily": "RTX 50 series",
       "ramGb": null,
       "storageGb": null,
       "screenInches": 18,
       "resolution": "4K/UHD",
-      "vramGb": null,
+      "vramGb": 16,
       "hardExcluded": false,
       "hardExclusionReason": null,
       "riskFlags": [],
@@ -17249,7 +17240,7 @@
       "specConfidence": "low",
       "provenance": {
         "cpu": "unknown",
-        "gpu": "unknown",
+        "gpu": "title",
         "ram": "unknown",
         "storage": "unknown"
       },
@@ -17278,13 +17269,12 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": null,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
       "missingSpecs": [
         "CPU",
-        "GPU",
         "RAM",
         "storage"
       ]
@@ -17336,7 +17326,7 @@
         "RTX 5080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 180,
+      "gpuPower": 152.4,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 8,
@@ -17393,7 +17383,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 154.3,
+      "gpuPower": 131.9,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 4,
@@ -17448,7 +17438,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17505,7 +17495,7 @@
         "RTX 5070 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 128.6,
+      "gpuPower": 111.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17562,7 +17552,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17619,7 +17609,7 @@
         "RTX 4070 i9 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 117.1,
+      "gpuPower": 112.3,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17676,7 +17666,7 @@
         "RTX 4080 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 145.7,
+      "gpuPower": 142.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17790,7 +17780,7 @@
         "RTX 4090 laptop"
       ],
       "cpuPower": null,
-      "gpuPower": 162.9,
+      "gpuPower": 155.5,
       "combinedPower": null,
       "valueIndex": null,
       "recommendationScore": 0,
@@ -17859,5 +17849,5 @@
       ]
     }
   ],
-  "schemaVersion": 3
+  "schemaVersion": 5
 }

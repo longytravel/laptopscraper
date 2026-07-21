@@ -96,15 +96,22 @@ test('rejects desktop and external GPU contexts but accepts eBay laptop category
   assert.equal(parseLaptopListing({ title: 'Custom RTX 4080 computer', categoryId: '177' }).gpuModel, 'NVIDIA GeForce RTX 4080 Laptop GPU')
 })
 
+test('keeps laptop GPUs when desktop is only comparison or seller context', () => {
+  assert.equal(parseLaptopListing({ title: 'ASUS RTX 4080 desktop-class gaming laptop' }).gpuModel, 'NVIDIA GeForce RTX 4080 Laptop GPU')
+  assert.equal(parseLaptopListing({ title: 'Lenovo RTX 4070 laptop', description: 'Selling because I upgraded to a desktop PC.' }).gpuModel, 'NVIDIA GeForce RTX 4070 Laptop GPU')
+})
+
 test('does not exclude a complete laptop merely because its description mentions the motherboard', () => {
   const parsed = parseLaptopListing({ title: 'ASUS ROG laptop RTX 4080', description: 'Motherboard tested and working.' })
   assert.equal(parsed.hardExcluded, false)
 })
 
 test('tracks description provenance truthfully', () => {
-  const parsed = parseLaptopListing({ title: 'Gaming laptop', description: 'Intel i9-14900HX with RTX 4080' })
+  const parsed = parseLaptopListing({ title: 'Gaming laptop', description: 'Intel i9-14900HX with RTX 4080, 64GB RAM and 2TB SSD' })
   assert.equal(parsed.provenance.cpu, 'description')
   assert.equal(parsed.provenance.gpu, 'description')
+  assert.equal(parsed.provenance.ram, 'description')
+  assert.equal(parsed.provenance.storage, 'description')
 })
 
 test('every benchmark entry carries auditable source metadata', () => {
@@ -113,7 +120,11 @@ test('every benchmark entry carries auditable source metadata', () => {
     assert.match(entry.source.url, /^https:\/\//)
     assert.match(entry.source.observedAt, /^\d{4}-\d{2}-\d{2}$/)
     assert.ok(entry.source.metric)
+    assert.ok(entry.source.derived)
+    assert.match(decodeURIComponent(entry.source.url).toLowerCase(), new RegExp(entry.canonical.split(' ').slice(-2).join(' ').toLowerCase().replace(/[+]/g, '\\+')))
   }
+  assert.equal(new Set(CPU_BENCHMARKS.map((entry) => entry.source.url)).size, CPU_BENCHMARKS.length)
+  assert.equal(new Set(GPU_BENCHMARKS.map((entry) => entry.source.url)).size, GPU_BENCHMARKS.length)
 })
 
 test('anchors the current laptop and adjusts CPU priority', () => {

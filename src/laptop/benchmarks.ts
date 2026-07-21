@@ -1,4 +1,4 @@
-export const BENCHMARK_VERSION = '2026-07-passmark-class-index-v2'
+export const BENCHMARK_VERSION = '2026-07-passmark-class-index-v4'
 
 export interface BenchmarkSource {
   name: string
@@ -6,6 +6,7 @@ export interface BenchmarkSource {
   observedAt: string
   metric: string
   method: string
+  derived: boolean
 }
 
 export interface BenchmarkEntry {
@@ -20,20 +21,42 @@ export interface BenchmarkEntry {
 
 type BenchmarkSeed = Omit<BenchmarkEntry, 'source'>
 
-const CPU_SOURCE: BenchmarkSource = {
+const CPU_SOURCE: Omit<BenchmarkSource, 'url'> = {
   name: 'PassMark CPU Mark',
-  url: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-14900HX&id=5867',
   observedAt: '2026-07-21',
   metric: 'CPU Mark representative model index',
   method: 'Model-level catalog snapshot; rounded class estimates are used where direct samples are sparse.',
+  derived: true,
 }
 
-const GPU_SOURCE: BenchmarkSource = {
+const GPU_SOURCE: Omit<BenchmarkSource, 'url'> = {
   name: 'PassMark G3D Mark',
-  url: 'https://www.videocardbenchmark.net/',
   observedAt: '2026-07-21',
   metric: 'G3D Mark representative laptop-GPU class index',
   method: 'Model-level laptop-GPU catalog snapshot; real performance varies with TGP and cooling.',
+  derived: true,
+}
+
+function cpuSourceUrl(model: string): string {
+  return `https://www.cpubenchmark.net/cpu.php?cpu=${encodeURIComponent(model)}`
+}
+
+function gpuSourceUrl(model: string): string {
+  const passmarkModels: Record<string, { name: string; id: number }> = {
+    'NVIDIA GeForce RTX 5090 Laptop GPU': { name: 'GeForce RTX 5090 Laptop GPU', id: 5754 },
+    'NVIDIA GeForce RTX 5080 Laptop GPU': { name: 'GeForce RTX 5080 Laptop GPU', id: 6099 },
+    'NVIDIA GeForce RTX 5070 Ti Laptop GPU': { name: 'GeForce RTX 5070 Ti Laptop GPU', id: 6216 },
+    'NVIDIA GeForce RTX 5070 Laptop GPU': { name: 'GeForce RTX 5070 Laptop GPU', id: 6260 },
+    'NVIDIA GeForce RTX 5060 Laptop GPU': { name: 'GeForce RTX 5060 Laptop GPU', id: 6330 },
+    'NVIDIA GeForce RTX 4090 Laptop GPU': { name: 'GeForce RTX 4090 Laptop GPU', id: 4737 },
+    'NVIDIA GeForce RTX 4080 Laptop GPU': { name: 'GeForce RTX 4080 Laptop GPU', id: 4736 },
+    'NVIDIA GeForce RTX 4070 Laptop GPU': { name: 'GeForce RTX 4070 Laptop GPU', id: 4756 },
+    'NVIDIA GeForce RTX 4060 Laptop GPU': { name: 'GeForce RTX 4060 Laptop GPU', id: 4752 },
+    'NVIDIA RTX 5000 Ada Laptop GPU': { name: 'RTX 5000 Ada Generation Laptop GPU', id: 4807 },
+    'NVIDIA RTX 4000 Ada Laptop GPU': { name: 'RTX 4000 Ada Generation Laptop GPU', id: 4819 },
+  }
+  const source = passmarkModels[model]
+  return `https://www.videocardbenchmark.net/video_lookup.php?gpu=${encodeURIComponent(source.name)}&id=${source.id}`
 }
 
 // CPU Mark representative results, normalized in the engine against the
@@ -73,25 +96,39 @@ const CPU_SEEDS: BenchmarkSeed[] = [
   { canonical: 'AMD Ryzen AI 9 365', patterns: [/\bryzen\s*ai\s*9\s*365\b/i], score: 33000, manufacturer: 'AMD' },
 ]
 
-export const CPU_BENCHMARKS: BenchmarkEntry[] = CPU_SEEDS.map((entry) => ({ ...entry, source: CPU_SOURCE }))
+export const CPU_BENCHMARKS: BenchmarkEntry[] = CPU_SEEDS.map((entry) => ({
+  ...entry,
+  source: {
+    ...CPU_SOURCE,
+    url: cpuSourceUrl(entry.canonical),
+    method: `Derived representative index ${entry.score} for ${entry.canonical} from the linked PassMark model-family snapshot; rounded where samples were sparse.`,
+  },
+}))
 
 // G3D-style representative class indices. The GPU name alone does not encode
 // laptop TGP, so the UI keeps a visible model-estimate caveat.
 const GPU_SEEDS: BenchmarkSeed[] = [
-  { canonical: 'NVIDIA GeForce RTX 5090 Laptop GPU', patterns: [/\brtx\s*5090\b/i], score: 35000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 24 },
-  { canonical: 'NVIDIA GeForce RTX 5080 Laptop GPU', patterns: [/\brtx\s*5080\b/i], score: 31500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 16 },
-  { canonical: 'NVIDIA GeForce RTX 5070 Ti Laptop GPU', patterns: [/\brtx\s*5070\s*ti\b/i], score: 27000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 12 },
-  { canonical: 'NVIDIA GeForce RTX 5070 Laptop GPU', patterns: [/\brtx\s*5070\b/i], score: 22500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
-  { canonical: 'NVIDIA GeForce RTX 5060 Laptop GPU', patterns: [/\brtx\s*5060\b/i], score: 19500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
-  { canonical: 'NVIDIA GeForce RTX 4090 Laptop GPU', patterns: [/\brtx\s*4090\b/i], score: 28500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 16 },
-  { canonical: 'NVIDIA GeForce RTX 4080 Laptop GPU', patterns: [/\brtx\s*4080\b/i], score: 25500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 12 },
-  { canonical: 'NVIDIA GeForce RTX 4070 Laptop GPU', patterns: [/\brtx\s*4070\b/i], score: 20500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
-  { canonical: 'NVIDIA GeForce RTX 4060 Laptop GPU', patterns: [/\brtx\s*4060\b/i], score: 17500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
-  { canonical: 'NVIDIA RTX 5000 Ada Laptop GPU', patterns: [/\brtx\s*5000\s*ada\b/i], score: 26000, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 16 },
-  { canonical: 'NVIDIA RTX 4000 Ada Laptop GPU', patterns: [/\brtx\s*4000\s*ada\b/i], score: 22500, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 12 },
+  { canonical: 'NVIDIA GeForce RTX 5090 Laptop GPU', patterns: [/\brtx\s*5090\b/i], score: 28798, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 24 },
+  { canonical: 'NVIDIA GeForce RTX 5080 Laptop GPU', patterns: [/\brtx\s*5080\b/i], score: 26523, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 16 },
+  { canonical: 'NVIDIA GeForce RTX 5070 Ti Laptop GPU', patterns: [/\brtx\s*5070\s*ti\b/i], score: 22960, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 12 },
+  { canonical: 'NVIDIA GeForce RTX 5070 Laptop GPU', patterns: [/\brtx\s*5070\b/i], score: 19362, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 5060 Laptop GPU', patterns: [/\brtx\s*5060\b/i], score: 17177, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 4090 Laptop GPU', patterns: [/\brtx\s*4090\b/i], score: 27063, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 16 },
+  { canonical: 'NVIDIA GeForce RTX 4080 Laptop GPU', patterns: [/\brtx\s*4080\b/i], score: 24797, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 12 },
+  { canonical: 'NVIDIA GeForce RTX 4070 Laptop GPU', patterns: [/\brtx\s*4070\b/i], score: 19548, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 4060 Laptop GPU', patterns: [/\brtx\s*4060\b/i], score: 17401, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
+  { canonical: 'NVIDIA RTX 5000 Ada Laptop GPU', patterns: [/\brtx\s*5000\s*ada\b/i], score: 23411, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 16 },
+  { canonical: 'NVIDIA RTX 4000 Ada Laptop GPU', patterns: [/\brtx\s*4000\s*ada\b/i], score: 22108, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 12 },
 ]
 
-export const GPU_BENCHMARKS: BenchmarkEntry[] = GPU_SEEDS.map((entry) => ({ ...entry, source: GPU_SOURCE }))
+export const GPU_BENCHMARKS: BenchmarkEntry[] = GPU_SEEDS.map((entry) => ({
+  ...entry,
+  source: {
+    ...GPU_SOURCE,
+    url: gpuSourceUrl(entry.canonical),
+    method: `Observed PassMark G3D model index ${entry.score} for ${entry.canonical}; used as a class estimate because laptop TGP and cooling vary.`,
+  },
+}))
 
 export const CPU_BASELINE = CPU_BENCHMARKS.find((entry) => entry.canonical === 'Intel Core i9-14900HX')!.score
 export const GPU_BASELINE = GPU_BENCHMARKS.find((entry) => entry.canonical === 'NVIDIA GeForce RTX 4060 Laptop GPU')!.score

@@ -7,6 +7,7 @@ import { BENCHMARK_VERSION } from '../src/laptop/benchmarks'
 import { enrichListing } from '../src/laptop/engine'
 import type { LaptopDataset } from '../src/laptop/types'
 import {
+  canUseCachedSearchFallback,
   collectSearches,
   enrichEbayItems,
   getEbayAppToken,
@@ -37,7 +38,7 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
 
 function upgradeLegacyCache(value: unknown): LaptopDataset {
   const dataset = value as LaptopDataset
-  if ((dataset.schemaVersion ?? 0) >= 3) return dataset
+  if ((dataset.schemaVersion ?? 0) >= 5) return dataset
   const listings = dataset.listings.map((listing) => enrichListing({
     sourceListingId: listing.id,
     categoryId: '177',
@@ -63,7 +64,7 @@ function upgradeLegacyCache(value: unknown): LaptopDataset {
   }))
   return {
     ...dataset,
-    schemaVersion: 3,
+    schemaVersion: 5,
     benchmarkVersion: BENCHMARK_VERSION,
     scoredCount: listings.filter((listing) => listing.combinedPower != null).length,
     needsCheckingCount: listings.filter((listing) => listing.combinedPower == null || listing.deliveredPrice == null).length,
@@ -107,7 +108,7 @@ async function main(): Promise<void> {
   })
   if (searchResult.items.length === 0) {
     const errors = searchResult.runs.filter((run) => run.error).map((run) => `${run.searchTerm}: ${run.error}`).join('; ')
-    if (await preserveRecentCache(outputPath, errors)) return
+    if (canUseCachedSearchFallback(searchResult.runs) && await preserveRecentCache(outputPath, errors)) return
     throw new Error(`No eBay laptop listings were collected. ${errors}`)
   }
 
@@ -123,7 +124,7 @@ async function main(): Promise<void> {
     .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY)))
 
   const dataset: LaptopDataset = {
-    schemaVersion: 3,
+    schemaVersion: 5,
     generatedAt: new Date().toISOString(),
     marketplaceId,
     benchmarkVersion: BENCHMARK_VERSION,

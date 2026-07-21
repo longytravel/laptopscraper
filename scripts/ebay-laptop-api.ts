@@ -12,7 +12,12 @@ export interface EbaySearchItem extends Record<string, unknown> {
   conditionDescription?: string
   condition?: string
   price?: { value?: string; currency?: string }
-  shippingOptions?: Array<{ shippingCost?: { value?: string; currency?: string } }>
+  shippingOptions?: Array<{
+    type?: string
+    shippingServiceCode?: string
+    shippingCarrierCode?: string
+    shippingCost?: { value?: string; currency?: string }
+  }>
   seller?: { username?: string; feedbackScore?: number; feedbackPercentage?: string }
   itemLocation?: { city?: string; country?: string }
   image?: { imageUrl?: string }
@@ -31,6 +36,12 @@ export interface SearchRun {
   returned: number
   total: number
   error?: string
+  transient?: boolean
+}
+
+export function canUseCachedSearchFallback(runs: SearchRun[]): boolean {
+  const failures = runs.filter((run) => run.error)
+  return failures.length > 0 && failures.every((run) => run.transient === true)
 }
 
 export function isUsableCachedDataset(value: unknown, now = Date.now(), maxAgeHours = 72): boolean {
@@ -132,7 +143,12 @@ export function deduplicateItems(items: EbaySearchItem[]): Array<EbaySearchItem 
 }
 
 export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
-  const shipping = item.shippingOptions?.[0]?.shippingCost?.value
+  const shipping = (item.shippingOptions ?? [])
+    .filter((option) => !/\b(?:pickup|pick\s*up|click\s*(?:and|&)\s*collect|collection)\b/i.test(`${option.type ?? ''} ${option.shippingServiceCode ?? ''} ${option.shippingCarrierCode ?? ''}`))
+    .map((option) => option.shippingCost?.value)
+    .filter((value): value is string => value != null && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0)
+    .map(Number)
+    .sort((a, b) => a - b)[0]
   const seller = item.seller ?? {}
   const location = item.itemLocation ?? {}
   const imageUrls = [item.image?.imageUrl, ...(item.additionalImages ?? []).map((image) => image.imageUrl)].filter(Boolean) as string[]
@@ -143,7 +159,7 @@ export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
     conditionDescription: item.conditionDescription ?? '',
     categoryId: item.categories?.find((category) => category.categoryId)?.categoryId,
     price: Number(item.price?.value ?? 0),
-    shippingPrice: shipping == null || shipping === '' ? null : Number(shipping),
+    shippingPrice: shipping ?? null,
     currency: item.price?.currency ?? 'GBP',
     condition: item.condition ?? 'Unknown',
     sellerName: seller.username ?? 'Unknown seller',
@@ -181,6 +197,7 @@ export async function collectSearches(options: {
     let total = 0
     try {
       let offset = 0
+      let nextUrl: string | null = null
       while (collected.length < perSearchLimit) {
         const pageLimit = Math.min(200, perSearchLimit - collected.length)
         const params = buildSearchParams(searchTerm, pageLimit, offset)
@@ -191,9 +208,9 @@ export async function collectSearches(options: {
         if (options.deliveryPostalCode) {
           headers['X-EBAY-C-ENDUSERCTX'] = `contextualLocation=country%3DGB%2Czip%3D${encodeURIComponent(options.deliveryPostalCode)}`
         }
-        const payload = await fetchJsonWithRetry<{ total?: number; itemSummaries?: EbaySearchItem[] }>(
+        const payload = await fetchJsonWithRetry<{ total?: number; next?: string; itemSummaries?: EbaySearchItem[] }>(
           fetchImpl,
-          `${SEARCH_URL}?${params}`,
+          nextUrl ?? `${SEARCH_URL}?${params}`,
           { headers },
           { retries: options.retries },
         )
@@ -201,13 +218,14 @@ export async function collectSearches(options: {
         total = payload.total ?? page.length
         collected.push(...page.slice(0, pageLimit))
         offset += page.length
-        if (page.length === 0 || offset >= total) break
+        nextUrl = payload.next ?? null
+        if (page.length === 0 || (!nextUrl && offset >= total)) break
       }
       items.push(...collected.map((item) => ({ ...item, searchTerm })))
       runs.push({ searchTerm, returned: collected.length, total })
     } catch (error) {
       items.push(...collected.map((item) => ({ ...item, searchTerm })))
-      runs.push({ searchTerm, returned: collected.length, total, error: error instanceof Error ? error.message : String(error) })
+      runs.push({ searchTerm, returned: collected.length, total, error: error instanceof Error ? error.message : String(error), transient: isTransientEbayFailure(error) })
     }
   }
 
