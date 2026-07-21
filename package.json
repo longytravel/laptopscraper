@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:laptops": "tsx --test tests-js/*.test.ts",
+    "collect:laptops": "tsx scripts/collect-laptops.ts",
     "collect:ebay": "node scripts/collect-ebay.mjs",
     "collect:sold": "node scripts/collect-ebay-sold.mjs",
     "import:sold": "node scripts/import-sold-comps.mjs",
@@ -38,6 +40,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
+    "tsx": "^4.23.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10"

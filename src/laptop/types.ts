@@ -1,0 +1,124 @@
+export type SpecConfidence = 'high' | 'medium' | 'low'
+
+export interface EbayAspect {
+  name?: string
+  value?: string
+}
+
+export interface RawLaptopListing {
+  sourceListingId?: string
+  title?: string
+  description?: string
+  conditionDescription?: string
+  price?: number
+  shippingPrice?: number
+  currency?: string
+  condition?: string
+  sellerName?: string
+  sellerFeedbackScore?: number | null
+  sellerFeedbackPercent?: number | null
+  listingUrl?: string
+  location?: string
+  imageUrls?: string[]
+  imageUrl?: string
+  localizedAspects?: EbayAspect[]
+  buyingOptions?: string[]
+  returnTerms?: { returnsAccepted?: boolean } | null
+  listedAt?: string | null
+  scrapedAt?: string
+  searchTerms?: string[]
+  rawPayload?: Record<string, unknown>
+}
+
+export interface ParsedLaptop {
+  brand: string | null
+  cpuModel: string | null
+  cpuManufacturer: string | null
+  gpuModel: string | null
+  gpuFamily: string | null
+  ramGb: number | null
+  storageGb: number | null
+  screenInches: number | null
+  resolution: string | null
+  vramGb: number | null
+  hardExcluded: boolean
+  hardExclusionReason: string | null
+  riskFlags: string[]
+  warnings: string[]
+  specConfidence: SpecConfidence
+  provenance: Record<string, 'aspect' | 'title' | 'description' | 'catalog' | 'unknown'>
+}
+
+export interface LaptopListing extends ParsedLaptop {
+  id: string
+  title: string
+  description: string
+  listingUrl: string
+  imageUrl: string | null
+  price: number
+  shippingPrice: number
+  deliveredPrice: number
+  currency: string
+  condition: string
+  sellerName: string
+  sellerFeedbackScore: number | null
+  sellerFeedbackPercent: number | null
+  location: string
+  buyingOptions: string[]
+  returnsAccepted: boolean | null
+  listedAt: string | null
+  scrapedAt: string | null
+  searchTerms: string[]
+  cpuPower: number | null
+  gpuPower: number | null
+  combinedPower: number | null
+  valueIndex: number | null
+  recommendationScore: number
+  missingSpecs: string[]
+}
+
+export interface LaptopDataset {
+  generatedAt: string
+  marketplaceId: string
+  benchmarkVersion: string
+  rawCount: number
+  listingCount: number
+  scoredCount: number
+  needsCheckingCount: number
+  searchRuns: Array<{ searchTerm: string; returned: number; total: number; error?: string }>
+  listings: LaptopListing[]
+}
+
+export interface LaptopFilters {
+  minPrice: number
+  maxPrice: number
+  minCombinedPower: number
+  minCpuPower: number
+  minGpuPower: number
+  cpuWeight: number
+  minRamGb: number
+  minVramGb: number
+  minStorageGb: number
+  minScreenInches: number
+  maxScreenInches: number
+  minSellerFeedback: number
+  minSellerFeedbackCount: number
+  returnsRequired: boolean
+  ukOnly: boolean
+  showNeedsChecking: boolean
+  showHardExcluded: boolean
+  allowedConditions: Set<string>
+  allowedBrands: Set<string>
+  allowedCpuManufacturers: Set<string>
+  allowedGpuFamilies: Set<string>
+  allowedBuyingOptions: Set<string>
+  allowedConfidence: Set<SpecConfidence>
+  excludedRisks: Set<string>
+}
+
+export interface FrontierPoint {
+  id: string
+  deliveredPrice: number
+  combinedPower: number | null
+}
+

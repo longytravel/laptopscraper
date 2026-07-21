@@ -1,0 +1,57 @@
+export const BENCHMARK_VERSION = '2026-07-passmark-class-index-v1'
+
+export interface BenchmarkEntry {
+  canonical: string
+  patterns: RegExp[]
+  score: number
+  manufacturer: string
+  family?: string
+  vramGb?: number
+}
+
+// CPU Mark representative results, normalized in the engine against the
+// i9-14900HX snapshot (43,881). Laptop cooling and power limits can move real
+// performance materially, so the UI labels these as model-level estimates.
+export const CPU_BENCHMARKS: BenchmarkEntry[] = [
+  { canonical: 'Intel Core Ultra 9 285HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*285hx\b/i], score: 59400, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 9 275HX', patterns: [/\b(?:core\s*)?ultra\s*9\s*275hx\b/i], score: 54800, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 7 255HX', patterns: [/\b(?:core\s*)?ultra\s*7\s*255hx\b/i], score: 48000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-14900HX', patterns: [/\b(?:intel\s*)?(?:core\s*)?i9[-\s]?14900hx\b/i], score: 43881, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-13980HX', patterns: [/\bi9[-\s]?13980hx\b/i], score: 46800, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-13950HX', patterns: [/\bi9[-\s]?13950hx\b/i], score: 45500, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i9-13900HX', patterns: [/\bi9[-\s]?13900hx\b/i], score: 45000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i7-14700HX', patterns: [/\bi7[-\s]?14700hx\b/i], score: 37000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core i7-14650HX', patterns: [/\bi7[-\s]?14650hx\b/i], score: 33000, manufacturer: 'Intel' },
+  { canonical: 'Intel Core Ultra 9 185H', patterns: [/\b(?:core\s*)?ultra\s*9\s*185h\b/i], score: 29200, manufacturer: 'Intel' },
+  { canonical: 'AMD Ryzen 9 9955HX3D', patterns: [/\bryzen\s*9\s*9955hx3d\b/i], score: 67500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 9955HX', patterns: [/\bryzen\s*9\s*9955hx\b/i], score: 65500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 7945HX3D', patterns: [/\bryzen\s*9\s*7945hx3d\b/i], score: 56000, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 7945HX', patterns: [/\bryzen\s*9\s*7945hx\b/i], score: 54500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen 9 7845HX', patterns: [/\bryzen\s*9\s*7845hx\b/i], score: 47000, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen AI Max+ 395', patterns: [/\bryzen\s*ai\s*max\+?\s*395\b/i], score: 58500, manufacturer: 'AMD' },
+  { canonical: 'AMD Ryzen AI 9 HX 370', patterns: [/\bryzen\s*ai\s*9\s*hx\s*370\b/i], score: 35000, manufacturer: 'AMD' },
+]
+
+// G3D-style representative class indices. The GPU name alone does not encode
+// laptop TGP, so the UI keeps a visible model-estimate caveat.
+export const GPU_BENCHMARKS: BenchmarkEntry[] = [
+  { canonical: 'NVIDIA GeForce RTX 5090 Laptop GPU', patterns: [/\brtx\s*5090\b/i], score: 35000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 24 },
+  { canonical: 'NVIDIA GeForce RTX 5080 Laptop GPU', patterns: [/\brtx\s*5080\b/i], score: 31500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 16 },
+  { canonical: 'NVIDIA GeForce RTX 5070 Ti Laptop GPU', patterns: [/\brtx\s*5070\s*ti\b/i], score: 27000, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 12 },
+  { canonical: 'NVIDIA GeForce RTX 5070 Laptop GPU', patterns: [/\brtx\s*5070\b/i], score: 22500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 5060 Laptop GPU', patterns: [/\brtx\s*5060\b/i], score: 19500, manufacturer: 'NVIDIA', family: 'RTX 50 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 4090 Laptop GPU', patterns: [/\brtx\s*4090\b/i], score: 28500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 16 },
+  { canonical: 'NVIDIA GeForce RTX 4080 Laptop GPU', patterns: [/\brtx\s*4080\b/i], score: 25500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 12 },
+  { canonical: 'NVIDIA GeForce RTX 4070 Laptop GPU', patterns: [/\brtx\s*4070\b/i], score: 20500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
+  { canonical: 'NVIDIA GeForce RTX 4060 Laptop GPU', patterns: [/\brtx\s*4060\b/i], score: 17500, manufacturer: 'NVIDIA', family: 'RTX 40 series', vramGb: 8 },
+  { canonical: 'NVIDIA RTX 5000 Ada Laptop GPU', patterns: [/\brtx\s*5000\s*ada\b/i], score: 26000, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 16 },
+  { canonical: 'NVIDIA RTX 4000 Ada Laptop GPU', patterns: [/\brtx\s*4000\s*ada\b/i], score: 22500, manufacturer: 'NVIDIA', family: 'RTX workstation', vramGb: 12 },
+]
+
+export const CPU_BASELINE = CPU_BENCHMARKS.find((entry) => entry.canonical === 'Intel Core i9-14900HX')!.score
+export const GPU_BASELINE = GPU_BENCHMARKS.find((entry) => entry.canonical === 'NVIDIA GeForce RTX 4060 Laptop GPU')!.score
+
+export function matchBenchmark(text: string, catalog: BenchmarkEntry[]): BenchmarkEntry | null {
+  return catalog.find((entry) => entry.patterns.some((pattern) => pattern.test(text))) ?? null
+}
+
