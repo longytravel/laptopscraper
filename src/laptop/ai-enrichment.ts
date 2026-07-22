@@ -6,7 +6,7 @@ import { computeRecommendationScore, enrichListing } from './engine'
 import type { LaptopListing, RawLaptopListing, SpecConfidence } from './types'
 
 export const AI_MODEL = 'gpt-5.6-luna'
-export const AI_PROMPT_VERSION = 'laptop-evidence-v1'
+export const AI_PROMPT_VERSION = 'laptop-evidence-v2'
 
 const confidenceSchema = z.enum(['high', 'medium', 'low'])
 const textClaimSchema = z.object({
@@ -72,16 +72,39 @@ export interface ValidatedAiExtraction {
 }
 
 const SYSTEM_PROMPT = `Extract only laptop facts explicitly stated in the supplied eBay listing.
-Every non-null value must include a short, exact evidence substring copied from the title or description.
+Every non-null value must include a short, exact evidence substring copied from the title, description, condition description, or structured eBay aspects.
 Do not infer a CPU/GPU from a product family, estimate postage, invent benchmark scores, browse, or decide whether to buy.
+The deterministic parse is context for checking conflicts, never a valid evidence source by itself.
 Distinguish laptop GPUs from desktop parts and flag faults, locks, missing chargers, instability, and parts-only language.`
 
+export function aiEvidenceBundle(listing: LaptopListing) {
+  const deterministic = <T>(field: string, value: T, alias?: string): T | null => (
+    listing.provenance[field] === 'ai' || (alias && listing.provenance[alias] === 'ai') ? null : value
+  )
+  return {
+    rawEvidence: {
+      title: listing.title,
+      description: listing.description,
+      condition: listing.condition,
+      conditionDescription: listing.sourceEvidence?.conditionDescription ?? '',
+      localizedAspects: listing.sourceEvidence?.localizedAspects ?? [],
+    },
+    deterministicParse: {
+      brand: deterministic('brand', listing.brand),
+      cpuModel: deterministic('cpuModel', listing.cpuModel, 'cpu'),
+      gpuModel: deterministic('gpuModel', listing.gpuModel, 'gpu'),
+      ramGb: deterministic('ramGb', listing.ramGb, 'ram'),
+      storageGb: deterministic('storageGb', listing.storageGb, 'storage'),
+      screenInches: deterministic('screenInches', listing.screenInches),
+      resolution: deterministic('resolution', listing.resolution),
+      vramGb: deterministic('vramGb', listing.vramGb),
+      provenance: Object.fromEntries(Object.entries(listing.provenance).map(([field, source]) => [field, source === 'ai' ? 'unknown' : source])),
+    },
+  }
+}
+
 function listingInput(listing: LaptopListing): string {
-  return [
-    `Title: ${listing.title}`,
-    `Description: ${listing.description}`,
-    `Condition: ${listing.condition}`,
-  ].join('\n')
+  return JSON.stringify(aiEvidenceBundle(listing), null, 2)
 }
 
 export async function requestListingEnrichment(client: AiResponsesClient, listing: LaptopListing): Promise<AiEnrichmentResponse> {
@@ -116,7 +139,13 @@ function emptyClaim(field: AiFieldName): AiListingExtraction['fields'][AiFieldNa
 }
 
 export function validateAiEvidence(listing: LaptopListing, extraction: AiListingExtraction): ValidatedAiExtraction {
-  const searchable = `${listing.title}\n${listing.description}`.toLocaleLowerCase()
+  const searchable = [
+    listing.title,
+    listing.description,
+    listing.condition,
+    listing.sourceEvidence?.conditionDescription ?? '',
+    ...(listing.sourceEvidence?.localizedAspects ?? []).flatMap((aspect) => [aspect.name ?? '', aspect.value ?? '']),
+  ].join('\n').toLocaleLowerCase()
   const accepted = structuredClone(extraction)
   const rejected: string[] = []
 
@@ -150,6 +179,7 @@ function rawFromListing(listing: LaptopListing, aspects: RawLaptopListing['local
     sourceListingId: listing.id,
     title: listing.title,
     description: listing.description,
+    conditionDescription: listing.sourceEvidence?.conditionDescription,
     categoryId: '177',
     price: listing.price,
     shippingPrice: listing.shippingPrice,
@@ -161,7 +191,7 @@ function rawFromListing(listing: LaptopListing, aspects: RawLaptopListing['local
     listingUrl: listing.listingUrl,
     location: listing.location,
     imageUrl: listing.imageUrl ?? undefined,
-    localizedAspects: aspects,
+    localizedAspects: [...(listing.sourceEvidence?.localizedAspects ?? []), ...(aspects ?? [])],
     buyingOptions: listing.buyingOptions,
     returnTerms: { returnsAccepted: listing.returnsAccepted ?? undefined },
     listedAt: listing.listedAt,
@@ -174,11 +204,19 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
   const fields = validated.accepted.fields
   const warnings = [...listing.warnings]
   const used = new Set<AiFieldName>()
+  const provenanceAlias: Partial<Record<AiFieldName, string>> = {
+    cpuModel: 'cpu',
+    gpuModel: 'gpu',
+    ramGb: 'ram',
+    storageGb: 'storage',
+  }
 
   function choose<T>(field: AiFieldName, existing: T | null, candidate: T | null): T | null {
     if (existing != null) {
       if (candidate != null && String(existing).toLocaleLowerCase() !== String(candidate).toLocaleLowerCase()) {
         warnings.push(`AI conflict for ${field}; kept deterministic value`)
+      } else if (candidate != null && (listing.provenance[field] === 'ai' || listing.provenance[provenanceAlias[field] ?? ''] === 'ai')) {
+        used.add(field)
       }
       return existing
     }
@@ -193,6 +231,8 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
   const storageGb = choose('storageGb', listing.storageGb, fields.storageGb.value)
   const screenInches = choose('screenInches', listing.screenInches, fields.screenInches.value)
   const resolution = choose('resolution', listing.resolution, fields.resolution.value)
+  const vramGb = choose('vramGb', listing.vramGb, fields.vramGb.value)
+  const ramUpgradeable = choose('ramUpgradeable', listing.ramUpgradeable ?? null, fields.ramUpgradeable.value)
 
   const aspects = [
     brand && { name: 'Brand', value: brand },
@@ -217,6 +257,9 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
   const mergedRiskFlags = [...new Set([...recomputed.riskFlags, ...validated.accepted.riskFlags.map((risk) => risk.label)])]
   return {
     ...recomputed,
+    sourceEvidence: listing.sourceEvidence ?? { conditionDescription: '', localizedAspects: [] },
+    vramGb,
+    ramUpgradeable,
     warnings: [...new Set([...recomputed.warnings, ...warnings])],
     riskFlags: mergedRiskFlags,
     recommendationScore: computeRecommendationScore({
@@ -234,6 +277,7 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
         value: claim.value,
         evidence: claim.evidence,
         confidence: claim.confidence,
+        applied: used.has(field as AiFieldName),
       }]),
       riskEvidence: validated.accepted.riskFlags,
       note: validated.accepted.note,

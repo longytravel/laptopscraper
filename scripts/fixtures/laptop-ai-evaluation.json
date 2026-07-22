@@ -1,0 +1,22 @@
+{
+  "label": "2026-07-22 pre-Luna eBay GB catalogue",
+  "sourceRef": "9056ce5",
+  "dataPath": "public/data/laptop-listings.json",
+  "expectations": {
+    "listingCount": 319,
+    "minimumChartableListings": 165,
+    "maximumInvariantChanges": 0,
+    "maximumInvalidEvidence": 0
+  },
+  "groundTruth": [
+    { "id": "v1|336579213088|0", "cpuModel": "AMD Ryzen AI 9 HX 375", "hardExcluded": false },
+    { "id": "v1|198488469961|0", "cpuModel": "AMD Ryzen AI 9 HX 370", "hardExcluded": false },
+    { "id": "v1|406973172683|0", "cpuModel": "AMD Ryzen 9 9955HX", "hardExcluded": false },
+    { "id": "v1|366552748689|0", "cpuModel": "Intel Core i7-13700HX", "hardExcluded": false },
+    { "id": "v1|236951956606|0", "cpuModel": "AMD Ryzen 9 8940HX", "gpuModel": "NVIDIA GeForce RTX 5070 Laptop GPU", "hardExcluded": false },
+    { "id": "v1|298510044183|0", "cpuModel": "Intel Core Ultra 9 275HX", "gpuModel": "NVIDIA GeForce RTX 5070 Laptop GPU", "hardExcluded": false },
+    { "id": "v1|257618551277|0", "cpuModel": "Intel Core i9-13900HX", "gpuModel": "NVIDIA GeForce RTX 4070 Laptop GPU", "hardExcluded": false },
+    { "id": "v1|227337133879|0", "cpuModel": "Intel Core Ultra 9 185H", "gpuModel": "NVIDIA GeForce RTX 4070 Laptop GPU", "hardExcluded": true },
+    { "id": "v1|298522880962|0", "cpuModel": null, "gpuModel": "NVIDIA GeForce RTX 5070 Laptop GPU", "hardExcluded": true }
+  ]
+}

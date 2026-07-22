@@ -48,6 +48,8 @@ test('requests GPT-5.6 Luna structured extraction at medium effort without stora
     sourceListingId: 'one',
     title: 'ASUS laptop with i9-14900HX',
     description: 'NVIDIA GeForce RTX 4070 Laptop GPU',
+    conditionDescription: 'The lid has one small scratch.',
+    localizedAspects: [{ name: 'RAM Size', value: '64 GB' }],
     price: 1000,
     shippingPrice: 0,
   })
@@ -58,6 +60,10 @@ test('requests GPT-5.6 Luna structured extraction at medium effort without stora
   assert.deepEqual(captured?.reasoning, { effort: 'medium' })
   assert.equal(captured?.store, false)
   assert.ok((captured?.input as unknown[]).length >= 2)
+  const userInput = ((captured?.input as Array<{ content: string }>)[1]?.content ?? '')
+  assert.match(userInput, /one small scratch/)
+  assert.match(userInput, /RAM Size/)
+  assert.match(userInput, /deterministic/i)
   assert.equal(result.responseId, 'resp_test')
   assert.equal(result.extraction.fields.cpuModel.value, 'Intel Core i9-14900HX')
 })
@@ -144,4 +150,32 @@ test('AI-evidenced risks deterministically reduce the recommendation score', () 
 
   assert.ok(merged.riskFlags.includes('battery failure'))
   assert.ok(merged.recommendationScore < row.recommendationScore)
+})
+
+test('applies evidence-backed VRAM and RAM upgradeability claims explicitly', () => {
+  const row = enrichListing({
+    sourceListingId: 'six',
+    title: 'Creator laptop with 12 GB VRAM',
+    description: 'Two SODIMM slots make the RAM upgradeable.',
+    price: 900,
+    shippingPrice: 0,
+  })
+  const validated = validateAiEvidence(row, extraction({
+    vramGb: claim(12, '12 GB VRAM'),
+    ramUpgradeable: claim(true, 'RAM upgradeable'),
+  }))
+
+  const merged = mergeAiEnrichment(row, validated)
+
+  assert.equal(merged.vramGb, 12)
+  assert.equal(merged.ramUpgradeable, true)
+  assert.equal(merged.provenance.vramGb, 'ai')
+  assert.equal(merged.provenance.ramUpgradeable, 'ai')
+  assert.equal(merged.aiEnrichment?.acceptedClaims.find((item) => item.field === 'vramGb')?.applied, true)
+  assert.equal(merged.aiEnrichment?.acceptedClaims.find((item) => item.field === 'ramUpgradeable')?.applied, true)
+
+  const replayed = mergeAiEnrichment(merged, validated)
+  assert.equal(replayed.provenance.vramGb, 'ai')
+  assert.equal(replayed.provenance.ramUpgradeable, 'ai')
+  assert.equal(replayed.aiEnrichment?.acceptedClaims.find((item) => item.field === 'vramGb')?.applied, true)
 })

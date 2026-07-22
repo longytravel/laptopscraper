@@ -219,6 +219,10 @@ export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopLis
     id: raw.sourceListingId ?? raw.listingUrl ?? titleId(raw.title ?? ''),
     title: raw.title ?? 'Untitled eBay listing',
     description: raw.description ?? '',
+    sourceEvidence: {
+      conditionDescription: raw.conditionDescription ?? '',
+      localizedAspects: raw.localizedAspects ?? [],
+    },
     listingUrl: raw.listingUrl ?? '',
     imageUrl: raw.imageUrls?.[0] ?? raw.imageUrl ?? null,
     price,
@@ -241,6 +245,7 @@ export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopLis
     valueIndex,
     recommendationScore,
     missingSpecs,
+    ramUpgradeable: null,
   }
 }
 
@@ -302,8 +307,9 @@ export function applyFilters(listings: LaptopListing[], filters: LaptopFilters):
     const recomputedPower = combinedPower(listing.cpuPower, listing.gpuPower, filters.cpuWeight)
     const needsChecking = recomputedPower == null
     const unknownPrice = listing.deliveredPrice == null
+    const filterPrice = listing.deliveredPrice ?? listing.price
     if (unknownPrice && !filters.showNeedsChecking) return false
-    if (!unknownPrice && (listing.deliveredPrice! < filters.minPrice || listing.deliveredPrice! > filters.maxPrice)) return false
+    if (filterPrice < filters.minPrice || filterPrice > filters.maxPrice) return false
     if (listing.hardExcluded && !filters.showHardExcluded) return false
     if (needsChecking && !filters.showNeedsChecking) return false
     if (!needsChecking && recomputedPower! < filters.minCombinedPower) return false

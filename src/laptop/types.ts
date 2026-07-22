@@ -54,6 +54,10 @@ export interface LaptopListing extends ParsedLaptop {
   id: string
   title: string
   description: string
+  sourceEvidence?: {
+    conditionDescription: string
+    localizedAspects: EbayAspect[]
+  }
   listingUrl: string
   imageUrl: string | null
   price: number
@@ -76,6 +80,7 @@ export interface LaptopListing extends ParsedLaptop {
   valueIndex: number | null
   recommendationScore: number
   missingSpecs: string[]
+  ramUpgradeable?: boolean | null
   aiEnrichment?: {
     model: string
     promptVersion: string
@@ -86,6 +91,7 @@ export interface LaptopListing extends ParsedLaptop {
       value: string | number | boolean
       evidence: string
       confidence: SpecConfidence
+      applied: boolean
     }>
     riskEvidence: Array<{ label: string; evidence: string }>
     note: string

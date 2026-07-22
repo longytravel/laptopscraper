@@ -159,6 +159,18 @@ test('keeps delivered price and value unknown when postage is unavailable', () =
   assert.ok(listing.missingSpecs.includes('shipping'))
 })
 
+test('applies price filters to the item-price lower bound when postage is unknown', () => {
+  const listing = enrichListing({ ...baseRaw, price: 3200, shippingPrice: null })
+  const filters = createDefaultFilters()
+  filters.showNeedsChecking = true
+  filters.maxPrice = 3000
+
+  assert.deepEqual(applyFilters([listing], filters), [])
+
+  filters.maxPrice = 3500
+  assert.equal(applyFilters([listing], filters).length, 1)
+})
+
 test('returns only non-dominated listings on the Pareto frontier', () => {
   const rows = [
     { id: 'a', deliveredPrice: 1000, combinedPower: 100 },

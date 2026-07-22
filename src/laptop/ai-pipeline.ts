@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import {
   AI_MODEL,
   AI_PROMPT_VERSION,
+  aiEvidenceBundle,
   mergeAiEnrichment,
   requestListingEnrichment,
   validateAiEvidence,
@@ -47,9 +48,7 @@ export interface AiPipelineOptions {
 export function listingFingerprint(listing: LaptopListing): string {
   return createHash('sha256').update(JSON.stringify({
     promptVersion: AI_PROMPT_VERSION,
-    title: listing.title,
-    description: listing.description,
-    condition: listing.condition,
+    evidence: aiEvidenceBundle(listing),
   })).digest('hex')
 }
 
@@ -61,6 +60,8 @@ function changedByMerge(before: LaptopListing, after: LaptopListing): boolean {
     storageGb: before.storageGb,
     screenInches: before.screenInches,
     resolution: before.resolution,
+    vramGb: before.vramGb,
+    ramUpgradeable: before.ramUpgradeable,
     riskFlags: before.riskFlags,
   }) !== JSON.stringify({
     cpuModel: after.cpuModel,
@@ -69,6 +70,8 @@ function changedByMerge(before: LaptopListing, after: LaptopListing): boolean {
     storageGb: after.storageGb,
     screenInches: after.screenInches,
     resolution: after.resolution,
+    vramGb: after.vramGb,
+    ramUpgradeable: after.ramUpgradeable,
     riskFlags: after.riskFlags,
   })
 }
@@ -116,10 +119,7 @@ export async function runAiEnrichment(
     const listing = listings[index]
     const fingerprint = listingFingerprint(listing)
     let entry: AiCacheEntry | undefined = cache.entries[fingerprint]
-    if (!entry && listing.aiEnrichment?.responseId) {
-      entry = Object.values(cache.entries).find((candidate) => candidate.responseId === listing.aiEnrichment?.responseId)
-      if (entry) cache.entries[fingerprint] = entry
-    }
+    if (entry?.model !== AI_MODEL || entry.promptVersion !== AI_PROMPT_VERSION) entry = undefined
 
     try {
       if (entry) {
@@ -145,6 +145,10 @@ export async function runAiEnrichment(
 
       const validated = validateAiEvidence(listing, entry.extraction)
       const merged = mergeAiEnrichment(listing, validated, entry.responseId)
+      if (merged.aiEnrichment) {
+        merged.aiEnrichment.model = entry.model
+        merged.aiEnrichment.promptVersion = entry.promptVersion
+      }
       if (changedByMerge(listing, merged)) stats.merged += 1
       listings[index] = merged
     } catch (error) {
@@ -167,6 +171,8 @@ export async function runAiEnrichment(
 
   await Promise.all(Array.from({ length: Math.min(concurrency, listings.length) }, () => worker()))
   await checkpointChain
+  const rowModels = [...new Set(listings.map((listing) => listing.aiEnrichment?.model).filter((value): value is string => Boolean(value)))]
+  const rowPromptVersions = [...new Set(listings.map((listing) => listing.aiEnrichment?.promptVersion).filter((value): value is string => Boolean(value)))]
 
   const enrichedDataset: LaptopDataset = {
     ...dataset,
@@ -175,8 +181,8 @@ export async function runAiEnrichment(
     scoredCount: listings.filter((listing) => listing.combinedPower != null).length,
     needsCheckingCount: listings.filter((listing) => listing.combinedPower == null || listing.deliveredPrice == null).length,
     aiRun: {
-      model: AI_MODEL,
-      promptVersion: AI_PROMPT_VERSION,
+      model: rowModels.length === 1 ? rowModels[0] : rowModels.length > 1 ? 'mixed' : AI_MODEL,
+      promptVersion: rowPromptVersions.length === 1 ? rowPromptVersions[0] : rowPromptVersions.length > 1 ? 'mixed' : AI_PROMPT_VERSION,
       requested: stats.requested,
       cached: stats.cached,
       succeeded: stats.succeeded,

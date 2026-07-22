@@ -38,10 +38,63 @@ function dataset(rows: LaptopDataset['listings']): LaptopDataset {
 }
 
 test('listing fingerprint is stable and changes with listing evidence', () => {
-  const row = enrichListing({ sourceListingId: 'one', title: 'ASUS laptop', description: 'First description', price: 1, shippingPrice: 0 })
+  const row = enrichListing({
+    sourceListingId: 'one',
+    title: 'ASUS laptop',
+    description: 'First description',
+    conditionDescription: 'Small mark on lid',
+    localizedAspects: [{ name: 'RAM Size', value: '32 GB' }],
+    price: 1,
+    shippingPrice: 0,
+  })
   assert.equal(listingFingerprint(row), listingFingerprint({ ...row }))
-  assert.equal(listingFingerprint(row), listingFingerprint({ ...row, cpuModel: 'Intel Core i9-14900HX', ramGb: 64 }))
+  assert.notEqual(listingFingerprint(row), listingFingerprint({ ...row, cpuModel: 'Intel Core i9-14900HX', ramGb: 64 }))
   assert.notEqual(listingFingerprint(row), listingFingerprint({ ...row, description: 'Changed description' }))
+  assert.notEqual(listingFingerprint(row), listingFingerprint({ ...row, sourceEvidence: { ...row.sourceEvidence!, conditionDescription: 'Cracked lid' } }))
+  assert.notEqual(listingFingerprint(row), listingFingerprint({ ...row, sourceEvidence: { ...row.sourceEvidence!, localizedAspects: [{ name: 'RAM Size', value: '64 GB' }] } }))
+})
+
+test('pipeline never reuses an old response ID when listing evidence changed', async () => {
+  const original = enrichListing({ sourceListingId: 'changed', title: 'Original laptop', description: '16 GB RAM', price: 500, shippingPrice: 0 })
+  const changed = {
+    ...original,
+    description: 'Now sold with 32 GB RAM',
+    aiEnrichment: {
+      model: AI_MODEL,
+      promptVersion: AI_PROMPT_VERSION,
+      responseId: 'old_response',
+      rejectedClaims: [],
+      acceptedClaims: [],
+      riskEvidence: [],
+      note: 'old',
+    },
+  }
+  const cache: AiEnrichmentCache = {
+    version: 1,
+    entries: {
+      [listingFingerprint(original)]: {
+        model: AI_MODEL,
+        promptVersion: AI_PROMPT_VERSION,
+        responseId: 'old_response',
+        createdAt: '2026-07-22T00:00:00.000Z',
+        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+        extraction: blankExtraction,
+      },
+    },
+  }
+  let calls = 0
+  const client: AiResponsesClient = {
+    responses: { parse: async () => {
+      calls += 1
+      return { id: 'new_response', output_parsed: blankExtraction }
+    } },
+  }
+
+  const result = await runAiEnrichment(dataset([changed]), client, cache, { concurrency: 1 })
+
+  assert.equal(calls, 1)
+  assert.equal(result.stats.requested, 1)
+  assert.equal(result.stats.cached, 0)
 })
 
 test('pipeline reuses cache and requests only changed listings', async () => {
@@ -100,4 +153,20 @@ test('pipeline records a failed request without mutating the listing', async () 
 
   assert.equal(result.stats.failed, 1)
   assert.deepEqual(result.dataset.listings[0], row)
+})
+
+test('pipeline counts VRAM-only enrichment as a material improvement', async () => {
+  const row = enrichListing({ sourceListingId: 'vram-only', title: 'Laptop with 12 GB VRAM', price: 700, shippingPrice: 0 })
+  const client: AiResponsesClient = { responses: { parse: async () => ({
+    id: 'vram_response',
+    output_parsed: {
+      ...blankExtraction,
+      fields: { ...blankExtraction.fields, vramGb: { value: 12, evidence: '12 GB VRAM', confidence: 'high' } },
+    },
+  }) } }
+
+  const result = await runAiEnrichment(dataset([row]), client, { version: 1, entries: {} }, { concurrency: 1 })
+
+  assert.equal(result.dataset.listings[0].vramGb, 12)
+  assert.equal(result.stats.merged, 1)
 })
