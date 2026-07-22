@@ -191,10 +191,6 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .listing-point.value-strong { fill: #0b9b78; }
 .listing-point.value-competitive { fill: #3367cf; }
 .listing-point.value-weak { fill: #9aa7b0; }
-.listing-point.is-lower-bound { fill: var(--paper); stroke-width: 2.5; }
-.listing-point.is-lower-bound.value-strong { stroke: #0b9b78; }
-.listing-point.is-lower-bound.value-competitive { stroke: #3367cf; }
-.listing-point.is-lower-bound.value-weak { stroke: #8997a1; }
 .listing-point:hover, .listing-point:focus { opacity: 1; stroke: var(--carbon); }
 .listing-point.is-frontier { fill: var(--green); stroke: #d9fff4; stroke-width: 3; opacity: 1; }
 .listing-point.is-selected { fill: var(--thermal); stroke: var(--carbon); stroke-width: 3; opacity: 1; }
@@ -209,7 +205,6 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .legend-dot.strong { background: #0b9b78; }
 .legend-dot.competitive { background: #3367cf; }
 .legend-dot.weak { background: #9aa7b0; }
-.legend-dot.hollow { background: var(--paper); border: 2px solid #3367cf; }
 .legend-dot.frontier { background: var(--green); box-shadow: 0 0 0 2px #bce4d9; }
 .legend-line { width: 18px; height: 0; border-top: 2px dashed var(--thermal); }
 .chart-selection {
@@ -267,11 +262,11 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .listing-main { min-width: 0; display: grid; align-content: center; gap: 8px; padding: 15px 18px; }
 .listing-kicker { flex-wrap: wrap; gap: 6px; }
 .listing-kicker span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px; font-size: 8px; font-weight: 700; text-transform: uppercase; color: #4e5a64; background: #e8edf0; }
+.listing-kicker .new-badge { color: #fff; background: #d83a24; box-shadow: 0 0 0 2px rgba(216, 58, 36, 0.14); letter-spacing: 0.08em; }
 .listing-kicker .positive { color: var(--green); background: #def1eb; }
 .listing-kicker .warning { color: #8c4c08; background: #f7ead9; }
 .listing-kicker .readiness-ready { color: var(--green); background: #def1eb; }
-.listing-kicker .readiness-postage-unknown { color: #2458a8; background: #e2eaf9; }
-.listing-kicker .readiness-specs-incomplete, .listing-kicker .readiness-postage-and-specs { color: #8c4c08; background: #f7ead9; }
+.listing-kicker .readiness-specs-incomplete { color: #8c4c08; background: #f7ead9; }
 .listing-kicker .ai-assisted { color: #5b3f92; background: #ece6f8; }
 .listing-main h3 { margin: 0; font-size: 13px; line-height: 1.35; }
 .spec-strip { flex-wrap: wrap; gap: 7px 14px; }

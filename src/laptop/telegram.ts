@@ -167,7 +167,10 @@ export async function sendTelegramMessage(options: {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "network error";
-    throw new Error(`Telegram send failed: ${message.replaceAll(options.token, "[redacted]")}`);
+    const redacted = message.replaceAll(options.token, "[redacted]");
+    // The original fetch error can contain the bot token in its request URL.
+    // eslint-disable-next-line preserve-caught-error
+    throw new Error(`Telegram send failed: ${redacted}`);
   }
 
   if (!response.ok) {

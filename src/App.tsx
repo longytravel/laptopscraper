@@ -38,6 +38,7 @@ import {
   toggleSelection,
 } from './laptop/dashboard'
 import { createDefaultFilters } from './laptop/engine'
+import { assessBestBuy } from './laptop/best-buy'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
@@ -45,9 +46,21 @@ const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP
 const NUMBER = new Intl.NumberFormat('en-GB')
 
 type SetFilterKey = 'allowedConditions' | 'allowedBrands' | 'allowedCpuManufacturers' | 'allowedGpuFamilies' | 'allowedBuyingOptions' | 'allowedConfidence' | 'excludedRisks'
-type ResultMode = 'matches' | 'needs-checking' | 'shortlist'
+type ResultMode = 'new' | 'matches' | 'needs-checking' | 'shortlist'
 type SortMode = 'recommended' | 'value' | 'power' | 'price'
-const RESULT_MODES: ResultMode[] = ['matches', 'needs-checking', 'shortlist']
+const RESULT_MODES: ResultMode[] = ['new', 'matches', 'needs-checking', 'shortlist']
+
+function signedPercent(power: number | null | undefined): string {
+  if (power == null) return 'unknown'
+  const percentage = Math.round(power - 100)
+  return `${percentage >= 0 ? '+' : ''}${percentage}%`
+}
+
+function isNewListing(row: LaptopListing): boolean {
+  if (!row.firstSeenAt) return false
+  const age = Date.now() - Date.parse(row.firstSeenAt)
+  return age >= 0 && age <= 24 * 60 * 60 * 1000
+}
 
 function ageLabel(value: string): string {
   const milliseconds = Date.now() - new Date(value).getTime()
@@ -115,17 +128,15 @@ function Switch({ checked, label, hint, onChange }: { checked: boolean; label: s
 
 function PowerChart({
   rows,
-  cpuWeight,
   selectedId,
   onSelect,
 }: {
   rows: LaptopListing[]
-  cpuWeight: number
   selectedId: string | null
   onSelect: (row: LaptopListing) => void
 }) {
   const clipId = useId().replace(/:/g, '')
-  const model = useMemo(() => buildChartModel(rows, cpuWeight), [rows, cpuWeight])
+  const model = useMemo(() => buildChartModel(rows), [rows])
   const width = 960
   const height = 500
   const pad = { top: 34, right: 34, bottom: 56, left: 64 }
@@ -157,8 +168,8 @@ function PowerChart({
         </div>
       ) : (
         <svg className="power-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${clipId}-title ${clipId}-desc`}>
-          <title id={`${clipId}-title`}>Listing price versus estimated laptop power</title>
-          <desc id={`${clipId}-desc`}>{model.points.length} eBay listings: {model.exactPointCount} exact delivered prices and {model.lowerBoundPointCount} item prices with postage unknown. The current ASUS G16 is the power 100 and £1,170 reference.</desc>
+          <title id={`${clipId}-title`}>Advertised price versus backtesting work performance</title>
+          <desc id={`${clipId}-desc`}>{model.points.length} qualifying eBay listings compared with the current ASUS G16 at work performance 100 and £1,170.</desc>
           <defs>
             <clipPath id={clipId}><rect x={pad.left} y={pad.top} width={innerWidth} height={innerHeight} /></clipPath>
           </defs>
@@ -169,8 +180,8 @@ function PowerChart({
           <g className="chart-axes" aria-hidden="true">
             {xTicks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{tick === 0 ? '£0' : `£${tick / 1000}k`}</text>)}
             {yTicks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
-            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">LISTING PRICE · HOLLOW DOTS EXCLUDE POSTAGE</text>
-            <text transform={`translate(17 ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">RELATIVE POWER</text>
+            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">ADVERTISED PRICE</text>
+            <text transform={`translate(17 ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">BACKTESTING WORK PERFORMANCE</text>
           </g>
           <g clipPath={`url(#${clipId})`}>
             <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
@@ -181,18 +192,18 @@ function PowerChart({
             {model.points.map((point) => {
               const isSelected = point.id === selectedId
               const isFrontier = model.frontierIds.has(point.id)
-              const value = assessValue(point.plottedPower, point.plottedPrice, point.priceCertainty)
+              const value = assessValue(point.plottedPower, point.plottedPrice)
               const radius = 5 + Math.max(0, Math.min(4, point.recommendationScore / 25))
               return (
                 <circle
                   key={point.id}
-                  className={`listing-point value-${value.band}${point.priceCertainty === 'lower-bound' ? ' is-lower-bound' : ''}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
+                  className={`listing-point value-${value.band}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
                   cx={x(point.plottedPrice)}
                   cy={y(point.plottedPower)}
                   r={radius}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${point.title}, ${point.priceCertainty === 'lower-bound' ? 'from ' : ''}${MONEY.format(point.plottedPrice)}, power ${point.plottedPower}, ${value.label}`}
+                  aria-label={`${point.title}, ${MONEY.format(point.plottedPrice)} advertised, work performance ${point.plottedPower}, ${value.label}`}
                   onClick={() => activate(point)}
                   onFocus={() => activate(point)}
                   onMouseEnter={() => activate(point)}
@@ -202,7 +213,7 @@ function PowerChart({
                       activate(point)
                     }
                   }}
-                ><title>{`${point.title}\n${point.priceCertainty === 'lower-bound' ? 'From ' : ''}${MONEY.format(point.plottedPrice)} · power ${point.plottedPower}\n${value.label}`}</title></circle>
+                ><title>{`${point.title}\n${MONEY.format(point.plottedPrice)} advertised · work performance ${point.plottedPower}\n${value.label}`}</title></circle>
               )
             })}
           </g>
@@ -212,24 +223,23 @@ function PowerChart({
           </g>
         </svg>
       )}
-      <div className="chart-counts" aria-label="Plotted listing price certainty">
+      <div className="chart-counts" aria-label="Plotted qualifying listings">
         <strong>{model.points.length} plotted</strong>
-        <span>{model.exactPointCount} delivered prices</span>
-        <span>{model.lowerBoundPointCount} item prices + postage</span>
+        <span>advertised item prices</span>
+        <span>all pass the replacement floor</span>
       </div>
       <div className="chart-legend" aria-hidden="true">
         <span><i className="legend-dot strong" />Strong value</span>
         <span><i className="legend-dot competitive" />Competitive</span>
         <span><i className="legend-dot weak" />Weak value</span>
-        <span><i className="legend-dot hollow" />+ postage unknown</span>
-        <span><i className="legend-dot frontier" />Exact Pareto pick</span>
-        <span><i className="legend-line" />Your G16 power</span>
+        <span><i className="legend-dot frontier" />Best-buy frontier</span>
+        <span><i className="legend-line" />Your G16 work performance</span>
       </div>
       <div className="chart-selection" aria-live="polite">
         {selected ? (
           <>
-            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span><small>{buildRecommendationReason(selected, cpuWeight)}</small><small>{selected.aiEnrichment ? `Luna evidence: ${selected.aiEnrichment.acceptedClaims.length} claims · ${selected.aiEnrichment.riskEvidence.length} risks` : 'Deterministic parse only'}</small></div>
-            <div className="selection-numbers"><strong>{selected.priceCertainty === 'lower-bound' ? 'From ' : ''}{MONEY.format(selected.plottedPrice)}</strong><span>power {selected.plottedPower} · {assessValue(selected.plottedPower, selected.plottedPrice, selected.priceCertainty).label}</span></div>
+            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected)}</small></div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong><span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.plottedPrice).label}</span></div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -238,16 +248,14 @@ function PowerChart({
   )
 }
 
-function ListingCard({ row, cpuWeight, shortlisted, onShortlist }: { row: LaptopListing; cpuWeight: number; shortlisted: boolean; onShortlist: () => void }) {
+function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; shortlisted: boolean; onShortlist: () => void }) {
   const risk = row.riskFlags.length > 0 || row.hardExcluded
   const readiness = classifyReadiness(row)
-  const plotted = chartPrice(row)
-  const value = row.combinedPower == null ? null : assessValue(row.combinedPower, plotted.price, plotted.certainty)
+  const assessment = assessBestBuy(row)
+  const value = assessment.workPerformance == null ? null : assessValue(assessment.workPerformance, row.price)
   const readinessLabel = {
-    ready: 'Ready to compare',
-    'postage-unknown': 'Postage unknown',
-    'specs-incomplete': 'Specs incomplete',
-    'postage-and-specs': 'Postage + specs missing',
+    ready: 'Passes every floor',
+    'specs-incomplete': 'Not a confirmed match',
   }[readiness]
   return (
     <article className={`listing-card readiness-${readiness}${readiness !== 'ready' ? ' needs-checking' : ''}`}>
@@ -257,6 +265,7 @@ function ListingCard({ row, cpuWeight, shortlisted, onShortlist }: { row: Laptop
       </div>
       <div className="listing-main">
         <div className="listing-kicker">
+          {isNewListing(row) && <span className="new-badge">NEW</span>}
           <span>{row.condition}</span>
           <span className={`readiness-badge readiness-${readiness}`}>{readinessLabel}</span>
           {row.aiEnrichment && <span className="ai-assisted"><Sparkles size={11} />Luna checked</span>}
@@ -272,12 +281,12 @@ function ListingCard({ row, cpuWeight, shortlisted, onShortlist }: { row: Laptop
         </div>
         <p className="seller-line">{row.sellerName} · {row.sellerFeedbackPercent == null ? 'feedback unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`} · {row.location || 'location unknown'}</p>
         {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}
-        <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row, cpuWeight)}</p>
+        <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row)}</p>
       </div>
       <div className="listing-metrics">
-        <div><span>{row.deliveredPrice == null ? 'Item price' : 'Delivered'}</span><strong>{MONEY.format(plotted.price)}</strong>{row.shippingPrice == null ? <small>+ postage unknown</small> : row.shippingPrice > 0 ? <small>includes {MONEY.format(row.shippingPrice)} postage</small> : <small>free postage quoted</small>}</div>
-        <div className="power-number"><span>Power</span><strong>{row.combinedPower ?? '—'}</strong><small>CPU {row.cpuPower ?? '—'} · GPU {row.gpuPower ?? '—'}</small></div>
-        <div><span>Vs your G16</span><strong>{value ? `${Math.round(value.ratio * 100)}%` : '—'}</strong><small>{value?.label ?? 'needs CPU/GPU evidence'}</small></div>
+        <div><span>Advertised</span><strong>{MONEY.format(row.price)}</strong><small>ranking uses this price only</small></div>
+        <div className="power-number"><span>Work performance</span><strong>{assessment.workPerformance == null ? '—' : signedPercent(assessment.workPerformance)}</strong><small>multi {signedPercent(row.cpuMultiPower)} · single {signedPercent(row.cpuSinglePower)}</small></div>
+        <div><span>Work value</span><strong>{value ? `${Math.round(value.ratio * 100)}%` : '—'}</strong><small>{value?.label ?? 'needs audited benchmark evidence'}</small></div>
       </div>
       <div className="listing-actions">
         <button type="button" className={`icon-button${shortlisted ? ' is-active' : ''}`} onClick={onShortlist} aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}>
@@ -292,9 +301,10 @@ function ListingCard({ row, cpuWeight, shortlisted, onShortlist }: { row: Laptop
 function ShortlistComparison({ rows, onRemove }: { rows: LaptopListing[]; onRemove: (id: string) => void }) {
   const visible = rows.slice(0, 6)
   const values: Array<[string, (row: LaptopListing) => React.ReactNode]> = [
-    ['Delivered', (row) => row.deliveredPrice == null ? 'Unknown' : MONEY.format(row.deliveredPrice)],
-    ['Overall power', (row) => row.combinedPower ?? '—'],
-    ['CPU / GPU', (row) => `${row.cpuPower ?? '—'} / ${row.gpuPower ?? '—'}`],
+    ['Advertised price', (row) => MONEY.format(row.price)],
+    ['Work performance', (row) => signedPercent(row.workPerformance)],
+    ['Multi / single', (row) => `${signedPercent(row.cpuMultiPower)} / ${signedPercent(row.cpuSinglePower)}`],
+    ['Work value', (row) => row.workPerformance == null ? 'Unknown' : assessValue(row.workPerformance, row.price).label],
     ['CPU', (row) => row.cpuModel ?? 'Unknown'],
     ['GPU', (row) => row.gpuModel ?? 'Unknown'],
     ['RAM / storage', (row) => `${row.ramGb ?? '—'} GB / ${row.storageGb ?? '—'} GB`],
@@ -323,7 +333,7 @@ function App() {
   const [filters, setFilters] = useState<LaptopFilters>(() => createDefaultFilters())
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [mode, setMode] = useState<ResultMode>('matches')
+  const [mode, setMode] = useState<ResultMode>('new')
   const [sortMode, setSortMode] = useState<SortMode>('recommended')
   const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
 
@@ -349,22 +359,23 @@ function App() {
   const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
   const groups = useMemo(() => partitionResults(dataset?.listings ?? [], filters, query), [dataset, filters, query])
   const filtered = groups.matches
+  const newMatches = groups.newMatches
   const scoredMatches = groups.scored
   const needsChecking = groups.needsChecking
-  const readiness = groups.readiness
   const shortlistRows = useMemo(() => (dataset?.listings ?? []).filter((row) => shortlist.has(row.id)), [dataset, shortlist])
   const displayed = useMemo(() => {
-    const rows = mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
+    const rows = mode === 'new' ? newMatches : mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
     if (sortMode === 'price') return rows.slice().sort((a, b) => chartPrice(a).price - chartPrice(b).price)
-    if (sortMode === 'power') return rows.slice().sort((a, b) => (b.combinedPower ?? -1) - (a.combinedPower ?? -1))
+    if (sortMode === 'power') return rows.slice().sort((a, b) => (b.workPerformance ?? -1) - (a.workPerformance ?? -1))
     if (sortMode === 'value') return rows.slice().sort((a, b) => {
-      const aValue = a.combinedPower == null ? -1 : assessValue(a.combinedPower, chartPrice(a).price, chartPrice(a).certainty).ratio
-      const bValue = b.combinedPower == null ? -1 : assessValue(b.combinedPower, chartPrice(b).price, chartPrice(b).certainty).ratio
+      const aValue = a.workPerformance == null ? -1 : assessValue(a.workPerformance, a.price).ratio
+      const bValue = b.workPerformance == null ? -1 : assessValue(b.workPerformance, b.price).ratio
       return bValue - aValue
     })
+    if (mode === 'shortlist') return rows
     return rankListings(rows)
-  }, [filtered, mode, needsChecking, shortlistRows, sortMode])
-  const chart = useMemo(() => buildChartModel(scoredMatches, filters.cpuWeight), [scoredMatches, filters.cpuWeight])
+  }, [filtered, mode, needsChecking, newMatches, shortlistRows, sortMode])
+  const chart = useMemo(() => buildChartModel(scoredMatches), [scoredMatches])
 
   const effectiveSelectedId = selectedId && scoredMatches.some((row) => row.id === selectedId)
     ? selectedId
@@ -428,13 +439,11 @@ function App() {
           <FilterSection title="Price & power">
             <RangeControl label="Minimum price" value={filters.minPrice} min={0} max={3000} step={50} display={MONEY.format(filters.minPrice)} onChange={(value) => setNumber('minPrice', Math.min(value, filters.maxPrice))} />
             <RangeControl label="Maximum price" value={filters.maxPrice} min={0} max={3000} step={50} display={MONEY.format(filters.maxPrice)} onChange={(value) => setNumber('maxPrice', Math.max(value, filters.minPrice))} />
-            <RangeControl label="Minimum overall power" value={filters.minCombinedPower} min={0} max={220} step={5} display={filters.minCombinedPower ? `${rangeLabel(filters.minCombinedPower)}${filters.minCombinedPower === 100 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minCombinedPower', value)} />
-            <RangeControl label="Minimum CPU power" value={filters.minCpuPower} min={0} max={160} step={5} display={filters.minCpuPower ? `${rangeLabel(filters.minCpuPower)}${filters.minCpuPower === 100 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minCpuPower', value)} />
-            <RangeControl label="Minimum GPU power" value={filters.minGpuPower} min={0} max={220} step={5} display={filters.minGpuPower ? `${rangeLabel(filters.minGpuPower)}${filters.minGpuPower === 100 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minGpuPower', value)} />
+            <RangeControl label="Minimum work performance" value={filters.minCombinedPower} min={0} max={180} step={5} display={filters.minCombinedPower ? `${rangeLabel(filters.minCombinedPower)}${filters.minCombinedPower === 100 ? ' · your G16' : ''}` : 'Any qualifying match'} onChange={(value) => setNumber('minCombinedPower', value)} />
+            <RangeControl label="Minimum multi-core" value={filters.minCpuPower} min={0} max={180} step={5} display={filters.minCpuPower ? `${rangeLabel(filters.minCpuPower)}${filters.minCpuPower === 100 ? ' · your G16' : ''}` : 'Any qualifying match'} onChange={(value) => setNumber('minCpuPower', value)} />
             <div className="priority-control">
-              <div><span>Power priority</span><strong>{Math.round(filters.cpuWeight * 100)}% CPU · {Math.round((1 - filters.cpuWeight) * 100)}% GPU</strong></div>
-              <div className="priority-labels"><span>GPU work</span><span>Backtests / builds</span></div>
-              <input aria-label="CPU priority percentage" type="range" min="20" max="90" step="5" value={filters.cpuWeight * 100} onChange={(event) => setNumber('cpuWeight', Number(event.target.value) / 100)} />
+              <div><span>Backtesting score</span><strong>70% multi-core · 30% single-thread</strong></div>
+              <div className="priority-labels"><span>GPU has zero ranking weight</span><span>RTX 4060 minimum enforced</span></div>
             </div>
           </FilterSection>
 
@@ -471,20 +480,21 @@ function App() {
 
         <main className="dashboard-main">
           <section className="decision-strip" aria-label="Current filter summary">
-            <div><span>PLOTTED</span><strong>{chart.points.length}</strong><small>{chart.exactPointCount} delivered · {chart.lowerBoundPointCount} + postage</small></div>
-            <div><span>PARETO PICKS</span><strong>{chart.frontierIds.size}</strong><small>no cheaper equal-power rival</small></div>
-            <div><span>NEEDS INFO</span><strong>{needsChecking.length}</strong><small>{readiness.postageUnknown.length + readiness.postageAndSpecs.length} postage · {readiness.specsIncomplete.length + readiness.postageAndSpecs.length} specs</small></div>
-            <p><Sparkles size={16} /> Power is normalized to your i9-14900HX + RTX 4060 G16 = <strong>100</strong>. Model scores are estimates; laptop power limits and cooling still matter.</p>
+            <div><span>QUALIFYING</span><strong>{chart.points.length}</strong><small>64 GB · 1 TB · no CPU downgrade</small></div>
+            <div><span>NEW IN 24H</span><strong>{newMatches.length}</strong><small>qualified additions since the last updates</small></div>
+            <div><span>BEST-BUY PICKS</span><strong>{chart.frontierIds.size}</strong><small>no cheaper equal-work rival</small></div>
+            <p><Sparkles size={16} /> Your i9-14900HX G16 is <strong>100</strong> for multi-core, single-thread and work performance. The RTX 4060 is a pass/fail floor; faster graphics do not change rank.</p>
           </section>
 
           <section className="graph-section">
-            <div className="section-heading"><div><span>PRICE / POWER FIELD</span><h2>Where more money actually buys more machine</h2></div><div className="weight-readout"><Cpu size={16} />{Math.round(filters.cpuWeight * 100)}% CPU <span>/</span> {Math.round((1 - filters.cpuWeight) * 100)}% GPU</div></div>
-            <PowerChart rows={scoredMatches} cpuWeight={filters.cpuWeight} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
+            <div className="section-heading"><div><span>ADVERTISED PRICE / WORK FIELD</span><h2>Where your money buys faster local backtesting</h2></div><div className="weight-readout"><Cpu size={16} />70% multi-core <span>/</span> 30% single-thread</div></div>
+            <PowerChart rows={scoredMatches} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
           </section>
 
           <section className="results-section">
             <div className="results-toolbar">
               <div className="result-tabs" role="tablist" aria-label="Result groups">
+                <button id="tab-new" role="tab" aria-controls="results-panel" aria-selected={mode === 'new'} tabIndex={mode === 'new' ? 0 : -1} className={mode === 'new' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'new')} onClick={() => setMode('new')}>New <span>{newMatches.length}</span></button>
                 <button id="tab-matches" role="tab" aria-controls="results-panel" aria-selected={mode === 'matches'} tabIndex={mode === 'matches' ? 0 : -1} className={mode === 'matches' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'matches')} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
                 <button id="tab-needs-checking" role="tab" aria-controls="results-panel" aria-selected={mode === 'needs-checking'} tabIndex={mode === 'needs-checking' ? 0 : -1} className={mode === 'needs-checking' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'needs-checking')} onClick={() => setMode('needs-checking')}>Needs info <span>{needsChecking.length}</span></button>
                 <button id="tab-shortlist" role="tab" aria-controls="results-panel" aria-selected={mode === 'shortlist'} tabIndex={mode === 'shortlist' ? 0 : -1} className={mode === 'shortlist' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'shortlist')} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
@@ -492,8 +502,9 @@ function App() {
               <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
             </div>
             <div className="result-explainer">
-              {mode === 'matches' && <><ShieldCheck size={16} />Ranked with price, power, seller evidence, returns, specification confidence and observed risk.</>}
-              {mode === 'needs-checking' && <><CircleAlert size={16} />Nothing here has “no price”: {readiness.postageUnknown.length + readiness.postageAndSpecs.length} have an item price but unknown postage; {readiness.specsIncomplete.length + readiness.postageAndSpecs.length} need better CPU/GPU evidence.</>}
+              {mode === 'new' && <><Sparkles size={16} />New since the last updates — every machine shown passes the complete replacement floor.</>}
+              {mode === 'matches' && <><ShieldCheck size={16} />Ranked by advertised-price work value, then evidence, seller safety, returns and condition.</>}
+              {mode === 'needs-checking' && <><CircleAlert size={16} />These are not recommendations: they fail a floor or still need better hardware evidence.</>}
               {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
             </div>
             <div id="results-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
@@ -502,7 +513,7 @@ function App() {
               ) : mode === 'shortlist' ? (
                 <ShortlistComparison rows={displayed} onRemove={(id) => setShortlist((current) => toggleSelection(current, id))} />
               ) : (
-                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} cpuWeight={filters.cpuWeight} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
+                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
               )}
             </div>
           </section>

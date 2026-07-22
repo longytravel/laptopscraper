@@ -1,7 +1,6 @@
 import {
   benchmarkKey,
   isFresh,
-  type BenchmarkEvidenceRecord,
   type BenchmarkEvidenceStore,
   type BenchmarkKind,
 } from '../src/laptop/benchmark-evidence'
