@@ -8,6 +8,7 @@
     "test": "npm run test:laptops",
     "test:laptops": "tsx --test tests-js/*.test.ts",
     "collect:laptops": "tsx scripts/collect-laptops.ts",
+    "refresh:laptop-benchmarks": "tsx scripts/refresh-benchmark-evidence.ts",
     "enrich:laptops:ai": "tsx scripts/enrich-laptops-ai.ts",
     "evaluate:laptops:ai": "tsx scripts/evaluate-laptop-ai.ts",
     "refresh:laptops": "npm run collect:laptops && npm run enrich:laptops:ai && npm run build",

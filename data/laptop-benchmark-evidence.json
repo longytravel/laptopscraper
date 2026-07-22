@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "refreshedAt": "2026-07-22T00:00:00Z",
+  "records": {
+    "cpu:Intel Core i9-14900HX": {
+      "kind": "cpu",
+      "canonical": "Intel Core i9-14900HX",
+      "multiCoreScore": 43856,
+      "singleThreadScore": 4177,
+      "sourceName": "PassMark",
+      "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=Intel%20Core%20i9-14900HX",
+      "observedAt": "2026-07-22",
+      "retrievedAt": "2026-07-22T00:00:00Z",
+      "sampleCount": null,
+      "status": "validated",
+      "providerVersion": "passmark-html-v1"
+    },
+    "gpu:NVIDIA GeForce RTX 4060 Laptop GPU": {
+      "kind": "gpu",
+      "canonical": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "graphicsScore": 17359,
+      "sourceName": "PassMark",
+      "sourceUrl": "https://www.videocardbenchmark.net/gpu.php?gpu=GeForce%20RTX%204060%20Laptop%20GPU&id=4752",
+      "observedAt": "2026-07-22",
+      "retrievedAt": "2026-07-22T00:00:00Z",
+      "sampleCount": null,
+      "status": "validated",
+      "providerVersion": "passmark-html-v1"
+    }
+  }
+}
