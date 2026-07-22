@@ -15,6 +15,7 @@ dist-ssr
 .vercel/
 *.local
 .env
+.cache/
 data/*.db
 data/images/*
 !data/images/.gitkeep

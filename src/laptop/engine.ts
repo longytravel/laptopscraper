@@ -12,6 +12,7 @@ import type {
   LaptopListing,
   ParsedLaptop,
   RawLaptopListing,
+  SpecConfidence,
 } from './types'
 
 const BRANDS = ['ASUS', 'Lenovo', 'MSI', 'Alienware', 'Dell', 'HP', 'Acer', 'Razer', 'Gigabyte', 'Medion', 'Samsung']
@@ -166,6 +167,22 @@ export function combinedPower(cpuPower: number | null, gpuPower: number | null, 
   return round(100 * (cpuPower / 100) ** boundedWeight * (gpuPower / 100) ** (1 - boundedWeight))
 }
 
+export function computeRecommendationScore(input: {
+  valueIndex: number | null
+  specConfidence: SpecConfidence
+  sellerFeedbackPercent: number | null
+  sellerFeedbackScore: number | null
+  returnsAccepted: boolean | null
+  riskFlags: string[]
+  hardExcluded: boolean
+}): number {
+  const confidencePoints = { high: 14, medium: 8, low: 0 }[input.specConfidence]
+  const sellerPoints = (input.sellerFeedbackPercent != null && input.sellerFeedbackPercent >= 99 ? 8 : input.sellerFeedbackPercent != null && input.sellerFeedbackPercent >= 97 ? 4 : 0)
+    + (input.sellerFeedbackScore != null && input.sellerFeedbackScore >= 100 ? 4 : 0)
+  const safetyPenalty = input.riskFlags.length * 7 + (input.hardExcluded ? 50 : 0)
+  return Math.max(0, Math.min(100, round((input.valueIndex ?? 0) * 0.55 + confidencePoints + sellerPoints + (input.returnsAccepted ? 6 : 0) - safetyPenalty, 0)))
+}
+
 export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopListing {
   const parsed = parseLaptopListing(raw)
   const cpuEntry = parsed.cpuModel ? CPU_BENCHMARKS.find((entry) => entry.canonical === parsed.cpuModel) : null
@@ -187,11 +204,15 @@ export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopLis
   const feedback = raw.sellerFeedbackPercent ?? null
   const feedbackCount = raw.sellerFeedbackScore ?? null
   const returnsAccepted = raw.returnTerms?.returnsAccepted ?? null
-  const confidencePoints = { high: 14, medium: 8, low: 0 }[parsed.specConfidence]
-  const sellerPoints = (feedback != null && feedback >= 99 ? 8 : feedback != null && feedback >= 97 ? 4 : 0)
-    + (feedbackCount != null && feedbackCount >= 100 ? 4 : 0)
-  const safetyPenalty = parsed.riskFlags.length * 7 + (parsed.hardExcluded ? 50 : 0)
-  const recommendationScore = Math.max(0, Math.min(100, round((valueIndex ?? 0) * 0.55 + confidencePoints + sellerPoints + (returnsAccepted ? 6 : 0) - safetyPenalty, 0)))
+  const recommendationScore = computeRecommendationScore({
+    valueIndex,
+    specConfidence: parsed.specConfidence,
+    sellerFeedbackPercent: feedback,
+    sellerFeedbackScore: feedbackCount,
+    returnsAccepted,
+    riskFlags: parsed.riskFlags,
+    hardExcluded: parsed.hardExcluded,
+  })
 
   return {
     ...parsed,
@@ -247,11 +268,11 @@ export function createDefaultFilters(): LaptopFilters {
   return {
     minPrice: 0,
     maxPrice: 3000,
-    minCombinedPower: 100,
-    minCpuPower: 100,
-    minGpuPower: 100,
+    minCombinedPower: 0,
+    minCpuPower: 0,
+    minGpuPower: 0,
     cpuWeight: 0.6,
-    minRamGb: 64,
+    minRamGb: 0,
     minVramGb: 0,
     minStorageGb: 0,
     minScreenInches: 0,

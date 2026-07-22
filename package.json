@@ -8,6 +8,9 @@
     "test": "npm run test:laptops",
     "test:laptops": "tsx --test tests-js/*.test.ts",
     "collect:laptops": "tsx scripts/collect-laptops.ts",
+    "enrich:laptops:ai": "tsx scripts/enrich-laptops-ai.ts",
+    "evaluate:laptops:ai": "tsx scripts/evaluate-laptop-ai.ts",
+    "refresh:laptops": "npm run collect:laptops && npm run enrich:laptops:ai && npm run build",
     "build": "tsc -b && vite build",
     "build:live": "npm run collect:laptops && npm run build",
     "lint": "eslint .",
@@ -16,8 +19,10 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "lucide-react": "^1.14.0",
+    "openai": "^6.48.0",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -23,7 +23,12 @@ import {
 
 import './App.css'
 import {
+  assessValue,
+  BASELINE_PRICE,
   buildChartModel,
+  buildRecommendationReason,
+  chartPrice,
+  classifyReadiness,
   deriveFacets,
   parseShortlist,
   partitionResults,
@@ -36,7 +41,6 @@ import { createDefaultFilters } from './laptop/engine'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
-const BASELINE_PRICE = 1170
 const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 })
 const NUMBER = new Intl.NumberFormat('en-GB')
 
@@ -133,7 +137,10 @@ function PowerChart({
   const yStep = Math.max(10, Math.ceil((model.yDomain[1] - model.yDomain[0]) / 6 / 10) * 10)
   const yTicks: number[] = []
   for (let value = Math.ceil(model.yDomain[0] / yStep) * yStep; value <= model.yDomain[1]; value += yStep) yTicks.push(value)
-  const frontierPath = model.frontier.map((point, index) => `${index ? 'L' : 'M'} ${x(point.deliveredPrice)} ${y(point.plottedPower)}`).join(' ')
+  const frontierPath = model.frontier.map((point, index) => `${index ? 'L' : 'M'} ${x(point.plottedPrice)} ${y(point.plottedPower)}`).join(' ')
+  const equalValuePowerAtMax = (3000 / BASELINE_PRICE) * 100
+  const equalValuePath = `M ${x(0)} ${y(0)} L ${x(3000)} ${y(equalValuePowerAtMax)}`
+  const valueLabelPower = Math.min(model.yDomain[1] - 5, Math.max(model.yDomain[0] + 8, (2020 / BASELINE_PRICE) * 100 + 18))
   const selected = model.points.find((point) => point.id === selectedId) ?? null
 
   function activate(point: ChartListing) {
@@ -150,8 +157,8 @@ function PowerChart({
         </div>
       ) : (
         <svg className="power-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${clipId}-title ${clipId}-desc`}>
-          <title id={`${clipId}-title`}>Delivered price versus estimated laptop power</title>
-          <desc id={`${clipId}-desc`}>{model.points.length} eBay listings. The current ASUS G16 is the power 100 and £1,170 reference. Green-ringed points are on the price-power Pareto frontier.</desc>
+          <title id={`${clipId}-title`}>Listing price versus estimated laptop power</title>
+          <desc id={`${clipId}-desc`}>{model.points.length} eBay listings: {model.exactPointCount} exact delivered prices and {model.lowerBoundPointCount} item prices with postage unknown. The current ASUS G16 is the power 100 and £1,170 reference.</desc>
           <defs>
             <clipPath id={clipId}><rect x={pad.left} y={pad.top} width={innerWidth} height={innerHeight} /></clipPath>
           </defs>
@@ -162,27 +169,30 @@ function PowerChart({
           <g className="chart-axes" aria-hidden="true">
             {xTicks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{tick === 0 ? '£0' : `£${tick / 1000}k`}</text>)}
             {yTicks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
-            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">DELIVERED PRICE</text>
+            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">LISTING PRICE · HOLLOW DOTS EXCLUDE POSTAGE</text>
             <text transform={`translate(17 ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">RELATIVE POWER</text>
           </g>
           <g clipPath={`url(#${clipId})`}>
             <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
             <line className="baseline-price" x1={x(BASELINE_PRICE)} x2={x(BASELINE_PRICE)} y1={pad.top} y2={height - pad.bottom} />
+            <path className="equal-value-line" d={equalValuePath} />
+            <text className="value-region-label" x={x(2020)} y={y(valueLabelPower)}>BETTER VALUE THAN YOUR G16 ↑</text>
             {frontierPath && <path className="pareto-line" d={frontierPath} />}
             {model.points.map((point) => {
               const isSelected = point.id === selectedId
               const isFrontier = model.frontierIds.has(point.id)
+              const value = assessValue(point.plottedPower, point.plottedPrice, point.priceCertainty)
               const radius = 5 + Math.max(0, Math.min(4, point.recommendationScore / 25))
               return (
                 <circle
                   key={point.id}
-                  className={`listing-point${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
-                  cx={x(point.deliveredPrice)}
+                  className={`listing-point value-${value.band}${point.priceCertainty === 'lower-bound' ? ' is-lower-bound' : ''}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
+                  cx={x(point.plottedPrice)}
                   cy={y(point.plottedPower)}
                   r={radius}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${point.title}, ${MONEY.format(point.deliveredPrice)}, power ${point.plottedPower}`}
+                  aria-label={`${point.title}, ${point.priceCertainty === 'lower-bound' ? 'from ' : ''}${MONEY.format(point.plottedPrice)}, power ${point.plottedPower}, ${value.label}`}
                   onClick={() => activate(point)}
                   onFocus={() => activate(point)}
                   onMouseEnter={() => activate(point)}
@@ -192,7 +202,7 @@ function PowerChart({
                       activate(point)
                     }
                   }}
-                ><title>{`${point.title}\n${MONEY.format(point.deliveredPrice)} · power ${point.plottedPower}`}</title></circle>
+                ><title>{`${point.title}\n${point.priceCertainty === 'lower-bound' ? 'From ' : ''}${MONEY.format(point.plottedPrice)} · power ${point.plottedPower}\n${value.label}`}</title></circle>
               )
             })}
           </g>
@@ -202,16 +212,24 @@ function PowerChart({
           </g>
         </svg>
       )}
+      <div className="chart-counts" aria-label="Plotted listing price certainty">
+        <strong>{model.points.length} plotted</strong>
+        <span>{model.exactPointCount} delivered prices</span>
+        <span>{model.lowerBoundPointCount} item prices + postage</span>
+      </div>
       <div className="chart-legend" aria-hidden="true">
-        <span><i className="legend-dot" />Listing</span>
-        <span><i className="legend-dot frontier" />Pareto value</span>
-        <span><i className="legend-line" />Your G16 baseline</span>
+        <span><i className="legend-dot strong" />Strong value</span>
+        <span><i className="legend-dot competitive" />Competitive</span>
+        <span><i className="legend-dot weak" />Weak value</span>
+        <span><i className="legend-dot hollow" />+ postage unknown</span>
+        <span><i className="legend-dot frontier" />Exact Pareto pick</span>
+        <span><i className="legend-line" />Your G16 power</span>
       </div>
       <div className="chart-selection" aria-live="polite">
         {selected ? (
           <>
-            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span></div>
-            <div className="selection-numbers"><strong>{MONEY.format(selected.deliveredPrice)}</strong><span>power {selected.plottedPower} · value {selected.valueIndex ?? '—'}</span></div>
+            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span><small>{buildRecommendationReason(selected, cpuWeight)}</small></div>
+            <div className="selection-numbers"><strong>{selected.priceCertainty === 'lower-bound' ? 'From ' : ''}{MONEY.format(selected.plottedPrice)}</strong><span>power {selected.plottedPower} · {assessValue(selected.plottedPower, selected.plottedPrice, selected.priceCertainty).label}</span></div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -220,10 +238,19 @@ function PowerChart({
   )
 }
 
-function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; shortlisted: boolean; onShortlist: () => void }) {
+function ListingCard({ row, cpuWeight, shortlisted, onShortlist }: { row: LaptopListing; cpuWeight: number; shortlisted: boolean; onShortlist: () => void }) {
   const risk = row.riskFlags.length > 0 || row.hardExcluded
+  const readiness = classifyReadiness(row)
+  const plotted = chartPrice(row)
+  const value = row.combinedPower == null ? null : assessValue(row.combinedPower, plotted.price, plotted.certainty)
+  const readinessLabel = {
+    ready: 'Ready to compare',
+    'postage-unknown': 'Postage unknown',
+    'specs-incomplete': 'Specs incomplete',
+    'postage-and-specs': 'Postage + specs missing',
+  }[readiness]
   return (
-    <article className={`listing-card${row.combinedPower == null ? ' needs-checking' : ''}`}>
+    <article className={`listing-card readiness-${readiness}${readiness !== 'ready' ? ' needs-checking' : ''}`}>
       <div className="listing-image">
         {row.imageUrl ? <img src={row.imageUrl} alt="" loading="lazy" /> : <Laptop aria-hidden="true" />}
         <span className={`confidence confidence-${row.specConfidence}`}>{row.specConfidence} confidence</span>
@@ -231,6 +258,8 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
       <div className="listing-main">
         <div className="listing-kicker">
           <span>{row.condition}</span>
+          <span className={`readiness-badge readiness-${readiness}`}>{readinessLabel}</span>
+          {row.aiEnrichment && <span className="ai-assisted"><Sparkles size={11} />Luna checked</span>}
           {row.returnsAccepted === true && <span className="positive"><ShieldCheck size={13} />Returns</span>}
           {risk && <span className="warning"><TriangleAlert size={13} />{row.riskFlags[0] ?? row.hardExclusionReason}</span>}
         </div>
@@ -243,11 +272,12 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
         </div>
         <p className="seller-line">{row.sellerName} · {row.sellerFeedbackPercent == null ? 'feedback unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`} · {row.location || 'location unknown'}</p>
         {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}
+        <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row, cpuWeight)}</p>
       </div>
       <div className="listing-metrics">
-        <div><span>Delivered</span><strong>{row.deliveredPrice == null ? '—' : MONEY.format(row.deliveredPrice)}</strong>{row.shippingPrice == null ? <small>postage unknown</small> : row.shippingPrice > 0 ? <small>includes {MONEY.format(row.shippingPrice)} postage</small> : <small>free postage quoted</small>}</div>
+        <div><span>{row.deliveredPrice == null ? 'Item price' : 'Delivered'}</span><strong>{MONEY.format(plotted.price)}</strong>{row.shippingPrice == null ? <small>+ postage unknown</small> : row.shippingPrice > 0 ? <small>includes {MONEY.format(row.shippingPrice)} postage</small> : <small>free postage quoted</small>}</div>
         <div className="power-number"><span>Power</span><strong>{row.combinedPower ?? '—'}</strong><small>CPU {row.cpuPower ?? '—'} · GPU {row.gpuPower ?? '—'}</small></div>
-        <div><span>Value / £1k</span><strong>{row.valueIndex ?? '—'}</strong><small>recommendation {row.recommendationScore}/100</small></div>
+        <div><span>Vs your G16</span><strong>{value ? `${Math.round(value.ratio * 100)}%` : '—'}</strong><small>{value?.label ?? 'needs CPU/GPU evidence'}</small></div>
       </div>
       <div className="listing-actions">
         <button type="button" className={`icon-button${shortlisted ? ' is-active' : ''}`} onClick={onShortlist} aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}>
@@ -321,12 +351,17 @@ function App() {
   const filtered = groups.matches
   const scoredMatches = groups.scored
   const needsChecking = groups.needsChecking
+  const readiness = groups.readiness
   const shortlistRows = useMemo(() => (dataset?.listings ?? []).filter((row) => shortlist.has(row.id)), [dataset, shortlist])
   const displayed = useMemo(() => {
     const rows = mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
-    if (sortMode === 'price') return rows.slice().sort((a, b) => (a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))
+    if (sortMode === 'price') return rows.slice().sort((a, b) => chartPrice(a).price - chartPrice(b).price)
     if (sortMode === 'power') return rows.slice().sort((a, b) => (b.combinedPower ?? -1) - (a.combinedPower ?? -1))
-    if (sortMode === 'value') return rows.slice().sort((a, b) => (b.valueIndex ?? -1) - (a.valueIndex ?? -1))
+    if (sortMode === 'value') return rows.slice().sort((a, b) => {
+      const aValue = a.combinedPower == null ? -1 : assessValue(a.combinedPower, chartPrice(a).price, chartPrice(a).certainty).ratio
+      const bValue = b.combinedPower == null ? -1 : assessValue(b.combinedPower, chartPrice(b).price, chartPrice(b).certainty).ratio
+      return bValue - aValue
+    })
     return rankListings(rows)
   }, [filtered, mode, needsChecking, shortlistRows, sortMode])
   const chart = useMemo(() => buildChartModel(scoredMatches, filters.cpuWeight), [scoredMatches, filters.cpuWeight])
@@ -436,9 +471,9 @@ function App() {
 
         <main className="dashboard-main">
           <section className="decision-strip" aria-label="Current filter summary">
-            <div><span>POWER-MATCHED</span><strong>{scoredMatches.length}</strong><small>at or above {filters.minCombinedPower}</small></div>
+            <div><span>PLOTTED</span><strong>{chart.points.length}</strong><small>{chart.exactPointCount} delivered · {chart.lowerBoundPointCount} + postage</small></div>
             <div><span>PARETO PICKS</span><strong>{chart.frontierIds.size}</strong><small>no cheaper equal-power rival</small></div>
-            <div><span>NEEDS CHECKING</span><strong>{needsChecking.length}</strong><small>missing CPU or GPU evidence</small></div>
+            <div><span>NEEDS INFO</span><strong>{needsChecking.length}</strong><small>{readiness.postageUnknown.length + readiness.postageAndSpecs.length} postage · {readiness.specsIncomplete.length + readiness.postageAndSpecs.length} specs</small></div>
             <p><Sparkles size={16} /> Power is normalized to your i9-14900HX + RTX 4060 G16 = <strong>100</strong>. Model scores are estimates; laptop power limits and cooling still matter.</p>
           </section>
 
@@ -451,14 +486,14 @@ function App() {
             <div className="results-toolbar">
               <div className="result-tabs" role="tablist" aria-label="Result groups">
                 <button id="tab-matches" role="tab" aria-controls="results-panel" aria-selected={mode === 'matches'} tabIndex={mode === 'matches' ? 0 : -1} className={mode === 'matches' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'matches')} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
-                <button id="tab-needs-checking" role="tab" aria-controls="results-panel" aria-selected={mode === 'needs-checking'} tabIndex={mode === 'needs-checking' ? 0 : -1} className={mode === 'needs-checking' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'needs-checking')} onClick={() => setMode('needs-checking')}>Needs checking <span>{needsChecking.length}</span></button>
+                <button id="tab-needs-checking" role="tab" aria-controls="results-panel" aria-selected={mode === 'needs-checking'} tabIndex={mode === 'needs-checking' ? 0 : -1} className={mode === 'needs-checking' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'needs-checking')} onClick={() => setMode('needs-checking')}>Needs info <span>{needsChecking.length}</span></button>
                 <button id="tab-shortlist" role="tab" aria-controls="results-panel" aria-selected={mode === 'shortlist'} tabIndex={mode === 'shortlist' ? 0 : -1} className={mode === 'shortlist' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'shortlist')} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
               </div>
               <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
             </div>
             <div className="result-explainer">
               {mode === 'matches' && <><ShieldCheck size={16} />Ranked with price, power, seller evidence, returns, specification confidence and observed risk.</>}
-              {mode === 'needs-checking' && <><CircleAlert size={16} />These may be good deals, but eBay did not provide enough CPU/GPU evidence for a defensible power score.</>}
+              {mode === 'needs-checking' && <><CircleAlert size={16} />Nothing here has “no price”: {readiness.postageUnknown.length + readiness.postageAndSpecs.length} have an item price but unknown postage; {readiness.specsIncomplete.length + readiness.postageAndSpecs.length} need better CPU/GPU evidence.</>}
               {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
             </div>
             <div id="results-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
@@ -467,7 +502,7 @@ function App() {
               ) : mode === 'shortlist' ? (
                 <ShortlistComparison rows={displayed} onRemove={(id) => setShortlist((current) => toggleSelection(current, id))} />
               ) : (
-                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
+                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} cpuWeight={filters.cpuWeight} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
               )}
             </div>
           </section>

@@ -3,7 +3,10 @@ import test from 'node:test'
 
 import { createDefaultFilters, enrichListing } from '../src/laptop/engine'
 import {
+  assessValue,
   buildChartModel,
+  buildRecommendationReason,
+  classifyReadiness,
   deriveFacets,
   parseShortlist,
   partitionResults,
@@ -94,4 +97,88 @@ test('needs-checking results obey the same query, seller, returns and risk filte
 
   const groups = partitionResults([matchingUnknown, wrongBrand], filters, 'creator')
   assert.deepEqual(groups.needsChecking.map((row) => row.id), ['match'])
+})
+
+test('chart includes item-price lower bounds without adding them to the exact frontier', () => {
+  const exact = listing('exact', 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD', 1000)
+  const lowerBound = enrichListing({
+    sourceListingId: 'lower',
+    title: 'MSI i9-14900HX RTX 4070 64GB RAM 1TB SSD',
+    price: 900,
+    shippingPrice: null,
+  })
+
+  const model = buildChartModel([exact, lowerBound], 0.6)
+  const plottedLowerBound = model.points.find((point) => point.id === 'lower')
+
+  assert.equal(model.points.length, 2)
+  assert.equal(model.exactPointCount, 1)
+  assert.equal(model.lowerBoundPointCount, 1)
+  assert.equal(plottedLowerBound?.plottedPrice, 900)
+  assert.equal(plottedLowerBound?.priceCertainty, 'lower-bound')
+  assert.equal(model.frontierIds.has('lower'), false)
+})
+
+test('classifies every combination of price and power readiness', () => {
+  const ready = listing('ready', 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD', 1000)
+  const postageUnknown = enrichListing({
+    sourceListingId: 'postage', title: 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD', price: 1000, shippingPrice: null,
+  })
+  const specsIncomplete = enrichListing({
+    sourceListingId: 'specs', title: 'ASUS creator laptop 64GB RAM 1TB SSD', price: 1000, shippingPrice: 0,
+  })
+  const both = enrichListing({
+    sourceListingId: 'both', title: 'ASUS creator laptop 64GB RAM 1TB SSD', price: 1000, shippingPrice: null,
+  })
+
+  assert.equal(classifyReadiness(ready), 'ready')
+  assert.equal(classifyReadiness(postageUnknown), 'postage-unknown')
+  assert.equal(classifyReadiness(specsIncomplete), 'specs-incomplete')
+  assert.equal(classifyReadiness(both), 'postage-and-specs')
+})
+
+test('partition keeps power-scored postage-unknown listings chartable and exposes readiness groups', () => {
+  const exact = listing('exact-group', 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD', 1000)
+  const postageUnknown = enrichListing({
+    sourceListingId: 'postage-group', title: 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD', price: 900, shippingPrice: null,
+  })
+  const specsIncomplete = enrichListing({
+    sourceListingId: 'specs-group', title: 'ASUS creator laptop 64GB RAM 1TB SSD', price: 800, shippingPrice: 0,
+  })
+  const filters = { ...createDefaultFilters(), minRamGb: 0, minStorageGb: 0, minCpuPower: 0, minGpuPower: 0, minCombinedPower: 0 }
+
+  const groups = partitionResults([exact, postageUnknown, specsIncomplete], filters)
+  assert.deepEqual(groups.scored.map((row) => row.id), ['exact-group', 'postage-group'])
+  assert.deepEqual(groups.readiness.ready.map((row) => row.id), ['exact-group'])
+  assert.deepEqual(groups.readiness.postageUnknown.map((row) => row.id), ['postage-group'])
+  assert.deepEqual(groups.readiness.specsIncomplete.map((row) => row.id), ['specs-group'])
+})
+
+test('value assessment is relative to the G16 and qualifies lower-bound prices', () => {
+  assert.deepEqual(assessValue(120, 1000, 'exact'), {
+    ratio: 1.4,
+    band: 'strong',
+    label: '40% better value than your G16',
+  })
+  assert.deepEqual(assessValue(100, 1170, 'lower-bound'), {
+    ratio: 1,
+    band: 'competitive',
+    label: 'Possibly similar value to your G16, before postage',
+  })
+})
+
+test('recommendation reason names power, memory, returns, and postage uncertainty', () => {
+  const row = enrichListing({
+    sourceListingId: 'reason',
+    title: 'ASUS i9-14900HX RTX 4070 64GB RAM 1TB SSD',
+    price: 1000,
+    shippingPrice: null,
+    returnTerms: { returnsAccepted: true },
+  })
+
+  const reason = buildRecommendationReason(row, 0.6)
+  assert.match(reason, /better value than your G16/i)
+  assert.match(reason, /64 GB RAM/i)
+  assert.match(reason, /returns accepted/i)
+  assert.match(reason, /postage is unknown/i)
 })

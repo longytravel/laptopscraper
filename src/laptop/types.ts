@@ -47,7 +47,7 @@ export interface ParsedLaptop {
   riskFlags: string[]
   warnings: string[]
   specConfidence: SpecConfidence
-  provenance: Record<string, 'aspect' | 'title' | 'description' | 'catalog' | 'unknown'>
+  provenance: Record<string, 'aspect' | 'title' | 'description' | 'catalog' | 'ai' | 'unknown'>
 }
 
 export interface LaptopListing extends ParsedLaptop {
@@ -76,6 +76,20 @@ export interface LaptopListing extends ParsedLaptop {
   valueIndex: number | null
   recommendationScore: number
   missingSpecs: string[]
+  aiEnrichment?: {
+    model: string
+    promptVersion: string
+    responseId: string | null
+    rejectedClaims: string[]
+    acceptedClaims: Array<{
+      field: string
+      value: string | number | boolean
+      evidence: string
+      confidence: SpecConfidence
+    }>
+    riskEvidence: Array<{ label: string; evidence: string }>
+    note: string
+  }
 }
 
 export interface LaptopDataset {
@@ -88,6 +102,17 @@ export interface LaptopDataset {
   scoredCount: number
   needsCheckingCount: number
   searchRuns: Array<{ searchTerm: string; returned: number; total: number; error?: string; transient?: boolean }>
+  aiRun?: {
+    model: string
+    promptVersion: string
+    requested: number
+    cached: number
+    succeeded: number
+    failed: number
+    merged: number
+    inputTokens: number
+    outputTokens: number
+  }
   listings: LaptopListing[]
 }
 
