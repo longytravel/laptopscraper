@@ -28,7 +28,8 @@ Postage is deliberately ignored. Filter, ranking, chart position and Telegram wo
 - Production dashboard: <https://laptopscraper.vercel.app>
 - GitHub repository: <https://github.com/longytravel/laptopscraper>
 - Canonical branch: `main`
-- Canonical commit at this handoff: `22446b6b57804ac3e2ae952b69217eb595446b5a`
+- Completed implementation checkpoint before this handoff: `22446b6b57804ac3e2ae952b69217eb595446b5a`
+- Current `main` includes this handoff after that checkpoint; always verify its live tip with the commands in **Resume order** rather than copying a self-referential handoff SHA
 - Current primary inventory source: official eBay Browse API
 - Production dataset generated: `2026-07-22T20:13:12.756Z`
 - Dataset at handoff: 319 collected listings, 18 eligible recommendations, schema version 7
