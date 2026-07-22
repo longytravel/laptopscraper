@@ -1,101 +1,115 @@
-# Laptop Power Finder
+# Laptop Best-Buy Finder
 
-An evidence-first dashboard for finding powerful laptops currently available on eBay UK. It compares listing price against normalized CPU/GPU power, highlights exact price-power Pareto picks, and keeps postage, seller, returns, condition, and specification uncertainty visible.
+An evidence-first eBay UK search that finds a dependable replacement for the current ASUS ROG Strix G16 and sends concise morning and evening Telegram updates. The dashboard and Telegram use one shared ranking model.
 
-The reference machine is an ASUS ROG Strix G16 with an Intel Core i9-14900HX, RTX 4060 Laptop GPU, and 64 GB RAM. Its CPU, GPU, and combined power scores are each normalized to `100`; its reference price is £1,170.
+The reference machine is:
 
-## What it does
+- Intel Core i9-14900HX
+- NVIDIA RTX 4060 Laptop GPU
+- 64 GB RAM
+- 1 TB storage
+- £1,170 reference price
 
-- Collects current listings through the official eBay Browse API—no HTML scraping.
-- Searches high-performance gaming and mobile-workstation families up to £3,000.
-- Deduplicates overlapping searches and enriches listings through the eBay item endpoint.
-- Extracts CPU, GPU, RAM, storage, display, seller, returns, and buying-option evidence.
-- Plots exact delivered prices as filled dots and item-price lower bounds as hollow dots when postage is unknown.
-- Colours points by value relative to the current G16 and keeps lower-bound points out of the exact Pareto frontier.
-- Separates “postage unknown” from incomplete CPU/GPU specifications instead of presenting known item prices as unavailable.
-- Saves a local shortlist with a side-by-side comparison and direct eBay links.
+## What qualifies
 
-## Power and value model
+A recommendation must be a complete working laptop, cost no more than £3,000 advertised, have at least 64 GB RAM and 1 TB storage, pass the RTX 4060 graphics floor, and have neither lower multi-core nor lower single-thread CPU performance than the G16. An unresolved specification conflict keeps a listing out of recommendations.
 
-CPU and GPU indices are versioned in `src/laptop/benchmarks.ts`, with source metadata and derivation notes. Scores are normalized against the current machine:
+Postage is deliberately excluded from filtering, ranking and recommendation wording. The system ranks the advertised item price only.
+
+Listings with missing or conflicting evidence stay in the separate **Needs info** view and are never sent as buying recommendations.
+
+## Backtesting work score
+
+All comparisons use the G16 as `100`:
 
 ```text
-cpuPower = 100 × candidateCpuIndex / i9-14900HX index
-gpuPower = 100 × candidateGpuIndex / RTX 4060 Laptop index
-combinedPower = 100 × (cpuPower / 100)^cpuWeight × (gpuPower / 100)^(1-cpuWeight)
+multiCore = 100 × candidateMultiCore / G16MultiCore
+singleThread = 100 × candidateSingleThread / G16SingleThread
+workPerformance = 100 × (multiCore / 100)^0.70 × (singleThread / 100)^0.30
+workValue = (workPerformance / advertisedPrice) / (100 / 1170)
 ```
 
-The dashboard opens with the whole scored market visible so the chart has enough context to reveal value. The G16 reference lines mark power 100 and £1,170; sliders can then narrow the field to a 64 GB, at-least-100 replacement. CPU/GPU weighting starts at 60% / 40% because build, Python, and backtesting workloads are CPU-heavy. Laptop TGP, firmware, cooling, and sustained thermal behaviour can differ even for the same model name, so power remains explicitly labelled as an estimate.
+Multi-core receives 70% because local optimizer work can run across parallel CPU workers. Single-thread receives 30% because each trial and serial phase still depends on one thread. GPU speed above the RTX 4060 floor has zero ranking weight. RAM and storage are gates shown separately, not artificial power multipliers.
 
-The G16’s equal-value line is based on power `100` at £1,170. Lower-bound item prices can show a *possible* value opportunity, but unknown postage is never treated as free.
+CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old.
 
-## Optional GPT-5.6 Luna enrichment
+## New listings and alerts
 
-`npm run enrich:laptops:ai` reads every listing with `gpt-5.6-luna` at medium reasoning effort and uses Structured Outputs to recover explicit specification and risk evidence that deterministic parsing missed.
+`firstSeenAt` is retained by eBay item ID. A qualifying item is marked **NEW** for 24 hours; a relisted title with the same item ID does not become new again.
 
-Safety and cost controls:
+The GitHub Actions workflow runs at approximately 08:00 and 20:00 in `Europe/London`, including daylight-saving changes. Each fresh successful run:
 
-- the deterministic parser, benchmark catalogue, exclusions, price arithmetic, and recommendation score remain authoritative;
-- every accepted AI claim needs an exact evidence substring from the listing;
-- existing deterministic fields are not silently overwritten;
-- unchanged listings are cached by a SHA-256 content fingerprint under ignored `.cache/`;
-- the command checkpoints after every successful response;
-- the browser never receives the API key and never calls OpenAI;
-- ordinary builds are offline and incur no model cost.
+1. collects current listings through the official eBay Browse API;
+2. optionally applies cached GPT-5.6 Luna evidence extraction;
+3. refreshes stale or newly required benchmarks and recalculates every score;
+4. runs tests, lint and the production build;
+5. deploys the verified dashboard to Vercel;
+6. sends Telegram only after deployment succeeds; and
+7. commits the successful dataset, benchmark cache and alert state.
+
+If eBay collection uses the cached fallback, verification still runs but deployment and Telegram are skipped. A snapshot already sent successfully is not sent twice.
 
 ## Local setup
 
-Requirements: Node.js 24+, eBay production Browse API credentials, and an OpenAI API key only if AI enrichment is wanted.
+Requirements: Node.js 24+ and eBay production Browse API credentials. OpenAI, Telegram and Vercel credentials are needed only for their respective optional/live operations.
 
 ```powershell
 npm install
 Copy-Item .env.example .env
 ```
 
-Set values in the ignored `.env` file:
+Put credentials in the ignored `.env`; never add them to source files or generated JSON.
 
-```dotenv
-EBAY_CLIENT_ID=your-client-id
-EBAY_CLIENT_SECRET=your-client-secret
-EBAY_MARKETPLACE_ID=EBAY_GB
-EBAY_DELIVERY_POSTCODE=your-uk-postcode
-EBAY_LAPTOP_LIMIT_PER_SEARCH=80
-EBAY_LAPTOP_DETAIL_LIMIT=320
-OPENAI_API_KEY=your-server-side-key
-```
-
-Refresh and enrich the static dataset, then start the app:
+The complete local refresh is:
 
 ```powershell
-npm run collect:laptops
-npm run enrich:laptops:ai
-npm run dev
-```
-
-Or run the complete verified refresh pipeline:
-
-```powershell
-npm run refresh:laptops
-```
-
-The collector and AI command write `public/data/laptop-listings.json` atomically. Missing postage remains unknown and is rendered as an item-price lower bound.
-
-## Verification
-
-```powershell
+npm run refresh:laptop-alerts
+npm run alerts:laptops:dry-run
 npm test
 npm run lint
 npm run build
 ```
 
-Tests cover parsing, exclusions, uncertainty, benchmark normalization, power weighting, chart price certainty, readiness states, value wording, Pareto calculation, shortlist storage, eBay requests, Luna request configuration, evidence validation, deterministic merge precedence, caching, and partial failures.
+`OPENAI_API_KEY` is optional. When absent, AI enrichment logs a skip and leaves the collected dataset unchanged before benchmark scoring continues.
 
-## Vercel
+To send a real Telegram digest after reviewing the dry run:
 
-`vercel.json` runs the offline `npm run build` command and deploys the already-generated static dataset. Refresh and verify the dataset locally before deployment. This prevents repeated eBay/OpenAI calls and surprise model spend on rebuilds.
+```powershell
+npm run alerts:laptops
+```
 
-The OpenAI key is not required in Vercel. The eBay credentials are needed locally only when refreshing data.
+The live command requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. It writes `data/laptop-alert-state.json` only after Telegram confirms delivery.
+
+## One-time Telegram and GitHub setup
+
+Create a bot with BotFather, then send that bot a message from the private Telegram chat that should receive alerts. Telegram cannot target the private chat until the user has started the conversation. Obtain the chat ID without putting the token or ID in a committed file.
+
+Configure the repository secrets interactively:
+
+```powershell
+gh secret set EBAY_CLIENT_ID
+gh secret set EBAY_CLIENT_SECRET
+gh secret set OPENAI_API_KEY
+gh secret set TELEGRAM_BOT_TOKEN
+gh secret set TELEGRAM_CHAT_ID
+gh secret set VERCEL_TOKEN
+gh secret set VERCEL_ORG_ID
+gh secret set VERCEL_PROJECT_ID
+```
+
+`OPENAI_API_KEY` can be omitted; all other secrets are required for the complete automated workflow. The workflow is also available through manual dispatch for a controlled smoke run.
+
+## Failure recovery
+
+- A transient eBay failure preserves the last good dataset and suppresses deploy/send.
+- A benchmark-provider failure retains the last validated record, marks it stale and prevents unknown hardware from becoming a recommendation.
+- AI failure cannot weaken deterministic exclusions or invent a ranking value.
+- Deployment failure prevents Telegram from linking to an unpublished dashboard.
+- Telegram failure leaves the snapshot unsent so a later run can retry it.
+- Transport errors redact the Telegram token.
+
+After fixing credentials or an upstream outage, run `npm run refresh:laptop-alerts`, inspect `npm run alerts:laptops:dry-run`, and manually dispatch the workflow.
 
 ## Buying-safety boundary
 
-The dashboard reports observable listing evidence; it does not certify a laptop as safe. Verify the exact model, GPU TGP, RAM upgrade path, charger, serial/warranty status, postage, and return terms with the seller before purchase.
+The system ranks observable listing evidence; it does not certify the physical laptop. Before purchase, verify the exact model, RAM configuration, storage, charger, serial/warranty status, return terms, GPU power limit, cooling condition and any seller disclosures.

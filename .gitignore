@@ -16,9 +16,13 @@ dist-ssr
 *.local
 .env
 .cache/
+data/raw-responses/
+data/laptop-alert-preview*
 data/*.db
 data/images/*
 !data/images/.gitkeep
+!data/laptop-benchmark-evidence.json
+!data/laptop-alert-state.json
 
 # Editor directories and files
 .vscode/*
