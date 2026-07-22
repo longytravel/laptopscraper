@@ -1,0 +1,74 @@
+name: Laptop best-buy alerts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
+      timezone: 'Europe/London'
+    - cron: '0 20 * * *'
+      timezone: 'Europe/London'
+
+concurrency:
+  group: laptop-best-buy-alerts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
+      EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
+      EBAY_MARKETPLACE_ID: EBAY_GB
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      LAPTOP_DASHBOARD_URL: https://laptopscraper.vercel.app
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run refresh:laptop-alerts
+
+      - name: Check whether collection is fresh
+        id: freshness
+        run: node -e "const fs=require('node:fs');const data=require('./public/data/laptop-listings.json');fs.appendFileSync(process.env.GITHUB_OUTPUT,'fresh='+(data.refreshStatus!=='cached-fallback')+'\n')"
+
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+
+      - name: Deploy verified dataset
+        if: steps.freshness.outputs.fresh == 'true'
+        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" > deployment-url.txt
+
+      - name: Send digest after publication
+        if: steps.freshness.outputs.fresh == 'true'
+        run: npm run alerts:laptops
+
+      - name: Persist successful snapshot and alert state
+        if: steps.freshness.outputs.fresh == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/laptop-listings.json data/laptop-benchmark-evidence.json data/laptop-alert-state.json
+          git diff --cached --quiet || git commit -m "chore: refresh laptop alerts"
+          git push
+
+      - name: Report preserved cached dataset
+        if: steps.freshness.outputs.fresh != 'true'
+        run: echo "Collection used the cached fallback; deploy and Telegram were skipped."

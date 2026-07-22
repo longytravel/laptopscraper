@@ -29,9 +29,16 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
   await rename(temporary, target)
 }
 
+export function isAiEnrichmentConfigured(apiKey: string | undefined): apiKey is string {
+  return Boolean(apiKey?.trim())
+}
+
 export async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY?.trim()
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required for npm run enrich:laptops:ai; no files were changed.')
+  if (!isAiEnrichmentConfigured(apiKey)) {
+    console.log('OPENAI_API_KEY is not configured; skipping optional AI enrichment without changing the dataset.')
+    return
+  }
 
   const dataset = JSON.parse(await readFile(DATA_PATH, 'utf8')) as LaptopDataset
   const cache = await readCache()

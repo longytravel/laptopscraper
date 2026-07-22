@@ -9,6 +9,7 @@
     "test:laptops": "tsx --test tests-js/*.test.ts",
     "collect:laptops": "tsx scripts/collect-laptops.ts",
     "refresh:laptop-benchmarks": "tsx scripts/refresh-benchmark-evidence.ts",
+    "refresh:laptop-alerts": "npm run collect:laptops && npm run enrich:laptops:ai && npm run refresh:laptop-benchmarks",
     "alerts:laptops": "tsx scripts/send-laptop-alerts.ts",
     "alerts:laptops:dry-run": "tsx scripts/send-laptop-alerts.ts --dry-run",
     "enrich:laptops:ai": "tsx scripts/enrich-laptops-ai.ts",

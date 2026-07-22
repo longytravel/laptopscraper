@@ -4,6 +4,7 @@ import test from 'node:test'
 import { enrichListing } from '../src/laptop/engine.ts'
 import { AI_MODEL, AI_PROMPT_VERSION, type AiResponsesClient } from '../src/laptop/ai-enrichment.ts'
 import { listingFingerprint, runAiEnrichment, type AiEnrichmentCache } from '../src/laptop/ai-pipeline.ts'
+import { isAiEnrichmentConfigured } from '../scripts/enrich-laptops-ai.ts'
 import type { LaptopDataset } from '../src/laptop/types.ts'
 
 const blankExtraction = {
@@ -21,6 +22,12 @@ const blankExtraction = {
   riskFlags: [],
   note: 'No extra facts.',
 }
+
+test('scheduled AI enrichment is optional when no API key is configured', () => {
+  assert.equal(isAiEnrichmentConfigured(undefined), false)
+  assert.equal(isAiEnrichmentConfigured('   '), false)
+  assert.equal(isAiEnrichmentConfigured('configured'), true)
+})
 
 function dataset(rows: LaptopDataset['listings']): LaptopDataset {
   return {

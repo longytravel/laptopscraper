@@ -14,7 +14,7 @@ const ROOT = process.cwd();
 const DATASET_PATH = path.join(ROOT, "public", "data", "laptop-listings.json");
 const STATE_PATH = path.join(ROOT, "data", "laptop-alert-state.json");
 const DASHBOARD_URL =
-  process.env.LAPTOP_DASHBOARD_URL ?? "https://laptopscraper.vercel.app/laptops";
+  process.env.LAPTOP_DASHBOARD_URL ?? "https://laptopscraper.vercel.app";
 
 async function readState(): Promise<AlertState> {
   try {
