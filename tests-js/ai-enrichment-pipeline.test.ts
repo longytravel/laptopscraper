@@ -170,3 +170,44 @@ test('pipeline counts VRAM-only enrichment as a material improvement', async () 
   assert.equal(result.dataset.listings[0].vramGb, 12)
   assert.equal(result.stats.merged, 1)
 })
+
+test('pipeline preserves snapshot and best-buy fields when hardware evidence is unchanged', async () => {
+  const base = enrichListing({
+    sourceListingId: 'preserve',
+    title: 'ASUS i9-14900HX RTX 4060 64GB RAM 1TB SSD laptop',
+    price: 1170,
+    shippingPrice: null,
+  })
+  const row = {
+    ...base,
+    firstSeenAt: '2026-07-21T08:00:00Z',
+    lastSeenAt: '2026-07-22T08:00:00Z',
+    cpuMultiPower: 100,
+    cpuSinglePower: 100,
+    workPerformance: 100,
+    workValue: 1,
+    bestBuyEligible: true,
+    bestBuyFailures: [],
+    benchmarkEvidenceAt: '2026-07-22T00:00:00Z',
+  }
+  const cache: AiEnrichmentCache = {
+    version: 1,
+    entries: {
+      [listingFingerprint(row)]: {
+        model: AI_MODEL,
+        promptVersion: AI_PROMPT_VERSION,
+        responseId: 'cached',
+        createdAt: '2026-07-22T00:00:00Z',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        extraction: blankExtraction,
+      },
+    },
+  }
+  const client: AiResponsesClient = { responses: { parse: async () => { throw new Error('must not call') } } }
+
+  const result = await runAiEnrichment(dataset([row]), client, cache, { concurrency: 1 })
+
+  assert.equal(result.dataset.listings[0].firstSeenAt, row.firstSeenAt)
+  assert.equal(result.dataset.listings[0].cpuMultiPower, 100)
+  assert.equal(result.dataset.listings[0].bestBuyEligible, true)
+})

@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import { BENCHMARK_VERSION } from '../src/laptop/benchmarks'
 import { enrichListing } from '../src/laptop/engine'
+import { mergeSeenTimestamps } from '../src/laptop/snapshot'
 import type { LaptopDataset } from '../src/laptop/types'
 import {
   canUseCachedSearchFallback,
@@ -76,7 +77,7 @@ async function preserveRecentCache(outputPath: string, reason: unknown): Promise
   try {
     const cached = JSON.parse(await readFile(outputPath, 'utf8')) as unknown
     if (!isUsableCachedDataset(cached)) return false
-    const upgraded = upgradeLegacyCache(cached)
+    const upgraded = { ...upgradeLegacyCache(cached), refreshStatus: 'cached-fallback' as const }
     await writeJsonAtomic(outputPath, upgraded)
     console.warn('eBay refresh was temporarily unavailable; preserving the recent committed dataset for this build.')
     console.warn(reason instanceof Error ? reason.message : String(reason))
@@ -92,6 +93,12 @@ async function main(): Promise<void> {
   const marketplaceId = process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB'
   const deliveryPostalCode = process.env.EBAY_DELIVERY_POSTCODE?.trim() || undefined
   const outputPath = path.resolve('public/data/laptop-listings.json')
+  let previousDataset: LaptopDataset | null = null
+  try {
+    previousDataset = upgradeLegacyCache(JSON.parse(await readFile(outputPath, 'utf8')) as unknown)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   let token: string
   try {
     token = await getEbayAppToken(clientId, clientSecret)
@@ -117,15 +124,17 @@ async function main(): Promise<void> {
     .filter((item) => Number(item.price?.value ?? 0) <= 3000)
     .slice(0, maxDetails)
   const enrichedItems = await enrichEbayItems({ items: candidates, token, marketplaceId, concurrency: 6, deliveryPostalCode })
-  const listings = enrichedItems
+  const collectedAt = new Date().toISOString()
+  const listings = mergeSeenTimestamps(previousDataset?.listings ?? [], enrichedItems
     .map(normalizeEbayItem)
     .map((raw) => enrichListing(raw))
     .filter((listing) => listing.price > 0 && listing.price <= 3000 && (listing.deliveredPrice == null || listing.deliveredPrice <= 3000))
-    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY)))
+    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))), collectedAt)
 
   const dataset: LaptopDataset = {
-    schemaVersion: 5,
-    generatedAt: new Date().toISOString(),
+    schemaVersion: 7,
+    generatedAt: collectedAt,
+    refreshStatus: 'fresh',
     marketplaceId,
     benchmarkVersion: BENCHMARK_VERSION,
     rawCount: searchResult.runs.reduce((sum, run) => sum + run.returned, 0),

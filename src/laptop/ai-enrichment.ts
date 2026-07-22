@@ -245,6 +245,7 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
   ].filter(Boolean) as Array<{ name: string; value: string }>
 
   const recomputed = enrichListing(rawFromListing(listing, aspects))
+  const hardwareUnchanged = listing.cpuModel === recomputed.cpuModel && listing.gpuModel === recomputed.gpuModel
   const provenance = { ...recomputed.provenance }
   for (const field of used) {
     provenance[field] = 'ai'
@@ -256,6 +257,7 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
 
   const mergedRiskFlags = [...new Set([...recomputed.riskFlags, ...validated.accepted.riskFlags.map((risk) => risk.label)])]
   return {
+    ...listing,
     ...recomputed,
     sourceEvidence: listing.sourceEvidence ?? { conditionDescription: '', localizedAspects: [] },
     vramGb,
@@ -267,6 +269,13 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
       riskFlags: mergedRiskFlags,
     }),
     provenance,
+    cpuMultiPower: hardwareUnchanged ? listing.cpuMultiPower : null,
+    cpuSinglePower: hardwareUnchanged ? listing.cpuSinglePower : null,
+    workPerformance: hardwareUnchanged ? listing.workPerformance : null,
+    workValue: hardwareUnchanged ? listing.workValue : null,
+    bestBuyEligible: hardwareUnchanged ? listing.bestBuyEligible : false,
+    bestBuyFailures: hardwareUnchanged ? listing.bestBuyFailures : ['benchmark refresh required'],
+    benchmarkEvidenceAt: hardwareUnchanged ? listing.benchmarkEvidenceAt : null,
     aiEnrichment: {
       model: AI_MODEL,
       promptVersion: AI_PROMPT_VERSION,

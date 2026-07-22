@@ -110,6 +110,7 @@ export interface LaptopListing extends ParsedLaptop {
 export interface LaptopDataset {
   schemaVersion: number
   generatedAt: string
+  refreshStatus?: 'fresh' | 'cached-fallback'
   marketplaceId: string
   benchmarkVersion: string
   rawCount: number
