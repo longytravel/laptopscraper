@@ -47,13 +47,13 @@ function signedRatioPercent(value: number): string {
   return `${rounded >= 0 ? "+" : ""}${rounded}%`;
 }
 
-function listingBlock(listing: LaptopListing, isNew: boolean): string {
+function listingBlock(listing: LaptopListing, isNew: boolean, position: number): string {
   const result = assessBestBuy(listing);
   const title = escapeTelegramHtml(listing.title);
   const url = escapeTelegramHtml(listing.listingUrl);
   const condition = escapeTelegramHtml(listing.condition ?? "Condition not stated");
   const confidence = listing.specConfidence;
-  const rank = listing.sellerFeedbackPercent
+  const seller = listing.sellerFeedbackPercent
     ? `${listing.sellerFeedbackPercent.toFixed(1)}% seller feedback`
     : "seller feedback unavailable";
 
@@ -63,7 +63,7 @@ function listingBlock(listing: LaptopListing, isNew: boolean): string {
     `Multi-core ${signedPercent(listing.cpuMultiPower!)} · single-thread ${signedPercent(listing.cpuSinglePower!)}`,
     `${listing.ramGb!}GB RAM · ${Math.round(listing.storageGb! / 1024)}TB storage · GPU passes the RTX 4060 floor`,
     `Work value ${signedRatioPercent(result.workValue!)} vs your G16`,
-    `${condition} · ${confidence} evidence confidence · ${escapeTelegramHtml(rank)}`,
+    `${condition} · ${confidence} evidence confidence · ${escapeTelegramHtml(seller)} · #${position} current best buy`,
     `<a href="${url}">View on eBay</a>`,
   ].join("\n");
 }
@@ -115,17 +115,28 @@ export function buildTelegramDigest(
     ? `<b>${newEligibleIds.length} new qualifying laptop${newEligibleIds.length === 1 ? "" : "s"}</b>`
     : "<b>No new qualifying laptops</b> — current best buy";
   const footer = `<a href="${escapeTelegramHtml(dashboardUrl)}">Open the full dashboard</a>`;
-  const sections = [header];
+  const updated = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(dataset.generatedAt));
+  const sections = [header, `Updated ${updated} · ${allEligible.length} qualifying`];
+  let added = 0;
 
   for (const listing of ordered) {
-    if (newEligibleIds.length === 0 && sections.length > 1) break;
-    const block = listingBlock(listing, newSet.has(listing.id));
+    if (newEligibleIds.length === 0 && added >= 1) break;
+    const block = listingBlock(listing, newSet.has(listing.id), ranked.indexOf(listing) + 1);
     const candidate = [...sections, block, footer].join("\n\n");
     if (candidate.length > 4096) break;
     sections.push(block);
+    added += 1;
   }
 
-  if (sections.length === 1 && ordered.length === 0) {
+  if (ordered.length === 0) {
     sections[0] = "<b>No qualifying laptops found</b>";
   }
 

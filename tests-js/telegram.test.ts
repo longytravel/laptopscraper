@@ -82,6 +82,8 @@ test('puts new best buys first and links to eBay', () => {
 
   assert.match(digest.html, /🆕 <b>Lenovo new/)
   assert.match(digest.html, /Multi-core \+28% · single-thread \+5%/)
+  assert.match(digest.html, /Updated 22 Jul 2026, 09:00 · 2 qualifying/)
+  assert.match(digest.html, /#1 current best buy/)
   assert.match(digest.html, /https:\/\/www\.ebay\.co\.uk\/itm\/new/)
   assert.ok(digest.html.indexOf('Lenovo new') < digest.html.indexOf('Lenovo old'))
   assert.ok(digest.html.length <= 4096)

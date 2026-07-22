@@ -12,6 +12,7 @@
     "refresh:laptop-alerts": "npm run collect:laptops && npm run enrich:laptops:ai && npm run refresh:laptop-benchmarks",
     "alerts:laptops": "tsx scripts/send-laptop-alerts.ts",
     "alerts:laptops:dry-run": "tsx scripts/send-laptop-alerts.ts --dry-run",
+    "verify:laptop-dataset": "tsx scripts/verify-laptop-dataset.ts",
     "enrich:laptops:ai": "tsx scripts/enrich-laptops-ai.ts",
     "evaluate:laptops:ai": "tsx scripts/evaluate-laptop-ai.ts",
     "refresh:laptops": "npm run collect:laptops && npm run enrich:laptops:ai && npm run build",

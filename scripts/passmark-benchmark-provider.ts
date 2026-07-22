@@ -48,11 +48,24 @@ export function parsePassmarkCpuPage(html: string): { multiCoreScore: number; si
   return { multiCoreScore: multi, singleThreadScore: single, sampleCount: samples }
 }
 
-export function parsePassmarkGpuPage(html: string, columnIndex = -1): { graphicsScore: number; sampleCount: number | null } {
+export function parsePassmarkGpuPage(html: string, target = -1): { graphicsScore: number; sampleCount: number | null } {
+  if (target > 100) {
+    const row = new RegExp(`<li\\b[^>]*\\bid=["']rk${target}["'][^>]*>[\\s\\S]*?<\\/li>`, 'i').exec(html)?.[0]
+    const metrics = row?.match(/onclick=["']x\(\s*event\s*,\s*\d+\s*,\s*(\d+)\s*,\s*\d+\s*,\s*(\d+)/i)
+    const graphicsScore = Number(metrics?.[1])
+    const sampleCount = Number(metrics?.[2])
+    if (Number.isFinite(graphicsScore) && graphicsScore > 0) {
+      return {
+        graphicsScore,
+        sampleCount: Number.isFinite(sampleCount) && sampleCount > 0 ? sampleCount : null,
+      }
+    }
+  }
+
   const text = visibleText(html)
   const samples = numbersBetween(text, /# of Samples/i, /G3D Rating/i)
   const ratings = numbersBetween(text, /G3D Rating/i)
-  const index = columnIndex < 0 ? ratings.length - 1 : columnIndex
+  const index = target < 0 || target > 100 ? ratings.length - 1 : target
   const graphicsScore = ratings[index]
   const sampleCount = samples[index] ?? null
   if (!Number.isFinite(graphicsScore) || graphicsScore <= 0) throw new Error('PassMark GPU metrics were not found')
@@ -74,6 +87,14 @@ async function fetchText(fetchImpl: typeof fetch, sourceUrl: string): Promise<st
   return response.text()
 }
 
+function gpuTargetId(sourceUrl: string): number {
+  try {
+    return Number(new URL(sourceUrl).searchParams.get('id') ?? -1)
+  } catch {
+    return -1
+  }
+}
+
 export async function refreshBenchmarkEvidence(
   models: HardwareModel[],
   store: BenchmarkEvidenceStore,
@@ -91,7 +112,9 @@ export async function refreshBenchmarkEvidence(
 
     try {
       const html = await fetchText(fetchImpl, model.sourceUrl)
-      const metrics = model.kind === 'cpu' ? parsePassmarkCpuPage(html) : parsePassmarkGpuPage(html)
+      const metrics = model.kind === 'cpu'
+        ? parsePassmarkCpuPage(html)
+        : parsePassmarkGpuPage(html, gpuTargetId(model.sourceUrl))
       records[key] = {
         kind: model.kind,
         canonical: model.canonical,

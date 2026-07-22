@@ -19,6 +19,7 @@ import { refreshDatasetBenchmarks } from '../scripts/refresh-benchmark-evidence.
 
 const cpuHtml = await readFile(new URL('./fixtures/passmark-cpu.html', import.meta.url), 'utf8')
 const gpuHtml = await readFile(new URL('./fixtures/passmark-gpu.html', import.meta.url), 'utf8')
+const liveGpuHtml = await readFile(new URL('./fixtures/passmark-gpu-live.html', import.meta.url), 'utf8')
 
 function cpuRecord(canonical: string, multiCoreScore: number, singleThreadScore: number, retrievedAt = '2026-07-22T00:00:00Z'): BenchmarkEvidenceRecord {
   return {
@@ -69,6 +70,13 @@ test('parses current CPU evidence and sample count', () => {
 
 test('parses the requested GPU column from a PassMark comparison', () => {
   assert.deepEqual(parsePassmarkGpuPage(gpuHtml, 1), { graphicsScore: 22415, sampleCount: 2863 })
+})
+
+test('parses the target GPU from the current PassMark chart-list markup', () => {
+  assert.deepEqual(parsePassmarkGpuPage(liveGpuHtml, 6216), {
+    graphicsScore: 22415,
+    sampleCount: 2877,
+  })
 })
 
 test('treats validated evidence as fresh for seven days inclusive', () => {

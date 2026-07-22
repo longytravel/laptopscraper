@@ -11,7 +11,7 @@ import { runAiEnrichment, type AiEnrichmentCache } from '../src/laptop/ai-pipeli
 import type { LaptopDataset } from '../src/laptop/types'
 
 const DATA_PATH = path.resolve('public/data/laptop-listings.json')
-const CACHE_PATH = path.resolve('.cache/laptop-ai-enrichment.json')
+const CACHE_PATH = path.resolve(process.env.LAPTOP_AI_CACHE_PATH ?? '.cache/laptop-ai-enrichment.json')
 
 async function readCache(): Promise<AiEnrichmentCache> {
   try {

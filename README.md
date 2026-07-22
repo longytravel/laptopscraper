@@ -71,6 +71,7 @@ npm run build
 ```
 
 `OPENAI_API_KEY` is optional. When absent, AI enrichment logs a skip and leaves the collected dataset unchanged before benchmark scoring continues.
+GitHub Actions restores the previous ignored enrichment cache so unchanged listings do not consume model calls on every scheduled run. Local worktrees can reuse a cache by setting `LAPTOP_AI_CACHE_PATH` to its absolute path.
 
 To send a real Telegram digest after reviewing the dry run:
 
