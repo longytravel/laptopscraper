@@ -80,6 +80,15 @@ export interface LaptopListing extends ParsedLaptop {
   valueIndex: number | null
   recommendationScore: number
   missingSpecs: string[]
+  cpuMultiPower?: number | null
+  cpuSinglePower?: number | null
+  workPerformance?: number | null
+  workValue?: number | null
+  bestBuyEligible?: boolean
+  bestBuyFailures?: string[]
+  benchmarkEvidenceAt?: string | null
+  firstSeenAt?: string
+  lastSeenAt?: string
   ramUpgradeable?: boolean | null
   aiEnrichment?: {
     model: string
