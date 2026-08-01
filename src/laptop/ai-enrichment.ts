@@ -5,8 +5,8 @@ import { CPU_BENCHMARKS, GPU_BENCHMARKS, matchBenchmark } from './benchmarks'
 import { computeRecommendationScore, enrichListing } from './engine'
 import type { LaptopListing, RawLaptopListing, SpecConfidence } from './types'
 
-// ponytail: mini-tier is enough here — evidence validation rejects weak claims anyway; bump back to a luna-tier model only if rejection rates hurt coverage
-export const AI_MODEL = 'gpt-5.4-mini'
+// luna beats every mini on price since the 2026-07-30 cut ($0.20/$1.20 vs $0.75/$4.50 per M) — recheck before swapping "down"
+export const AI_MODEL = 'gpt-5.6-luna'
 export const AI_PROMPT_VERSION = 'laptop-evidence-v2'
 
 const confidenceSchema = z.enum(['high', 'medium', 'low'])
