@@ -56,9 +56,9 @@ test('recognizes current high-performance CPU families seen in live eBay data', 
   }
 })
 
-test('structured aspects take precedence and conflicts lower confidence', () => {
+test('structured aspects take precedence for models, but inflated aspect capacities lose to the listing text', () => {
   const parsed = parseLaptopListing({
-    title: 'Lenovo Legion i9-14900HX RTX 4070 32GB 1TB',
+    title: 'Lenovo Legion i9-14900HX RTX 4070 32GB RAM 1TB',
     localizedAspects: [
       { name: 'Processor', value: 'AMD Ryzen 9 7945HX' },
       { name: 'RAM Size', value: '64 GB' },
@@ -68,9 +68,27 @@ test('structured aspects take precedence and conflicts lower confidence', () => 
 
   assert.equal(parsed.cpuModel, 'AMD Ryzen 9 7945HX')
   assert.equal(parsed.gpuModel, 'NVIDIA GeForce RTX 4080 Laptop GPU')
-  assert.equal(parsed.ramGb, 64)
+  assert.equal(parsed.ramGb, 32)
+  assert.equal(parsed.provenance.ram, 'title')
   assert.ok(parsed.warnings.includes('conflicting CPU specifications'))
+  assert.ok(parsed.warnings.includes('conflicting RAM specifications'))
   assert.equal(parsed.specConfidence, 'medium')
+})
+
+test('specs-stuffed listing (aspect 64GB/2TB vs text 32GB/1TB) is not best-buy eligible', () => {
+  const parsed = parseLaptopListing({
+    title: 'Alienware 16x Aurora, 16" Ultra 9 275HX 32GB DDR5, 1TB SSD, RTX 5070 Laptop NEW',
+    description: 'Memory: 32GB DDR5 (2x16GB), 5600 MT/s Storage: 1TB M.2 SSD',
+    localizedAspects: [
+      { name: 'RAM Size', value: '64 GB' },
+      { name: 'SSD Capacity', value: '2 TB' },
+      { name: 'Memory', value: '64GB DDR5 (2x 32GB) 5600Mhz' },
+    ],
+  })
+  assert.equal(parsed.ramGb, 32)
+  assert.equal(parsed.storageGb, 1024)
+  assert.ok(parsed.warnings.includes('conflicting RAM specifications'))
+  assert.ok(parsed.warnings.includes('conflicting storage specifications'))
 })
 
 test('hard excludes accessories and broken machines', () => {

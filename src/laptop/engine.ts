@@ -56,7 +56,7 @@ function findAspect(aspects: Map<string, string>, names: string[]): string {
 
 function numericCapacity(text: string, kind: 'ram' | 'storage'): number | null {
   const patterns = kind === 'ram'
-    ? [/(\d{1,3})\s*GB\s*(?:DDR\d?\s*)?(?:RAM|memory)/i, /(?:RAM|memory)\s*[:-]?\s*(\d{1,3})\s*GB/i]
+    ? [/(\d{1,3})\s*GB\s*(?:DDR\d?\s*)?(?:RAM|memory)/i, /(?:RAM|memory)\s*[:-]?\s*(\d{1,3})\s*GB/i, /(\d{1,3})\s*GB\s*DDR\d/i]
     : [/(\d+(?:\.\d+)?)\s*(TB|GB)\s*(?:NVMe|SSD|HDD|storage|solid\s+state)/i, /(?:storage|SSD|NVMe)\s*[:-]?\s*(\d+(?:\.\d+)?)\s*(TB|GB)/i]
   for (const pattern of patterns) {
     const match = text.match(pattern)
@@ -115,8 +115,14 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const descriptionRam = numericCapacity(description, 'ram')
   const titleStorage = numericCapacity(title, 'storage')
   const descriptionStorage = numericCapacity(description, 'storage')
-  const ramGb = ramAspect ?? titleRam ?? descriptionRam
-  const storageGb = storageAspect ?? titleStorage ?? descriptionStorage
+  const textRam = titleRam ?? descriptionRam
+  const textStorage = titleStorage ?? descriptionStorage
+  if (ramAspect && textRam && ramAspect !== textRam) warnings.push('conflicting RAM specifications')
+  if (storageAspect && textStorage && storageAspect !== textStorage) warnings.push('conflicting storage specifications')
+  // Sellers stuff inflated specs into eBay aspects to match search filters; when the
+  // listing's own text disagrees, trust the smaller claim.
+  const ramGb = ramAspect && textRam ? Math.min(ramAspect, textRam) : ramAspect ?? textRam
+  const storageGb = storageAspect && textStorage ? Math.min(storageAspect, textStorage) : storageAspect ?? textStorage
   const screenAspect = screenSize(findAspect(aspects, ['screen size', 'display size']))
   const screenInches = screenAspect ?? screenSize(fullText)
   const resolutionValue = findAspect(aspects, ['maximum resolution', 'resolution'])
@@ -132,8 +138,8 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const provenance = {
     cpu: aspectCpu ? 'aspect' as const : titleCpu ? 'title' as const : descriptionCpu ? 'description' as const : 'unknown' as const,
     gpu: aspectGpu && gpu ? 'aspect' as const : titleGpu && gpu ? 'title' as const : descriptionGpu && gpu ? 'description' as const : 'unknown' as const,
-    ram: ramAspect ? 'aspect' as const : titleRam ? 'title' as const : descriptionRam ? 'description' as const : 'unknown' as const,
-    storage: storageAspect ? 'aspect' as const : titleStorage ? 'title' as const : descriptionStorage ? 'description' as const : 'unknown' as const,
+    ram: ramAspect && !(textRam && textRam < ramAspect) ? 'aspect' as const : titleRam ? 'title' as const : descriptionRam ? 'description' as const : ramAspect ? 'aspect' as const : 'unknown' as const,
+    storage: storageAspect && !(textStorage && textStorage < storageAspect) ? 'aspect' as const : titleStorage ? 'title' as const : descriptionStorage ? 'description' as const : storageAspect ? 'aspect' as const : 'unknown' as const,
   }
 
   return {
