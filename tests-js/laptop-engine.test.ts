@@ -182,14 +182,15 @@ test('returns only non-dominated listings on the Pareto frontier', () => {
   assert.deepEqual(paretoFrontier(rows).map((row) => row.id), ['a', 'c'])
 })
 
-test('default filters show the scored market while preserving the £3,000 ceiling and CPU weighting', () => {
+test('default filters open at the G16 replacement floor with the £3,000 ceiling and CPU weighting', () => {
   const filters = createDefaultFilters()
   assert.equal(filters.maxPrice, 3000)
   assert.equal(filters.minCombinedPower, 0)
   assert.equal(filters.minCpuPower, 0)
   assert.equal(filters.minGpuPower, 0)
   assert.equal(filters.cpuWeight, 0.6)
-  assert.equal(filters.minRamGb, 0)
+  assert.equal(filters.minRamGb, 64)
+  assert.equal(filters.minStorageGb, 1000)
   assert.deepEqual(filters.excludedRisks, new Set(['instability reported', 'firmware or account lock', 'no charger']))
 })
 

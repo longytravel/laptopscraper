@@ -57,8 +57,8 @@ export async function main(): Promise<void> {
   })
 
   await writeJsonAtomic(DATA_PATH, result.dataset)
-  const inputPricePerMillion = Number(process.env.LUNA_INPUT_PRICE_PER_MILLION ?? 1)
-  const outputPricePerMillion = Number(process.env.LUNA_OUTPUT_PRICE_PER_MILLION ?? 6)
+  const inputPricePerMillion = Number(process.env.LUNA_INPUT_PRICE_PER_MILLION ?? 0.2)
+  const outputPricePerMillion = Number(process.env.LUNA_OUTPUT_PRICE_PER_MILLION ?? 1.2)
   const estimatedCost = result.stats.inputTokens * inputPricePerMillion / 1_000_000
     + result.stats.outputTokens * outputPricePerMillion / 1_000_000
   console.log(`AI enrichment complete: requested ${result.stats.requested}, cached ${result.stats.cached}, succeeded ${result.stats.succeeded}, failed ${result.stats.failed}, materially improved ${result.stats.merged}.`)
