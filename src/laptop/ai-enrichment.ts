@@ -111,10 +111,9 @@ function listingInput(listing: LaptopListing): string {
 export async function requestListingEnrichment(client: AiResponsesClient, listing: LaptopListing): Promise<AiEnrichmentResponse> {
   const response = await client.responses.parse({
     model: AI_MODEL,
-    reasoning: { effort: 'low' },
+    reasoning: { effort: 'medium' },
     store: false,
-    // ponytail: mini models need reasoning headroom — 1600 starved them into null outputs
-    max_output_tokens: 6000,
+    max_output_tokens: 1600,
     input: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: listingInput(listing) },
