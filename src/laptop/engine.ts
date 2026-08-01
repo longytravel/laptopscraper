@@ -142,6 +142,11 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
     storage: storageAspect && !(textStorage && textStorage < storageAspect) ? 'aspect' as const : titleStorage ? 'title' as const : descriptionStorage ? 'description' as const : storageAspect ? 'aspect' as const : 'unknown' as const,
   }
 
+  const weightMatch = `${findAspect(aspects, ['item weight', 'weight'])} ${fullText}`.match(/(\d+(?:\.\d+)?)\s*kg\b/i)
+  const weightCandidate = weightMatch ? Number(weightMatch[1]) : null
+  // laptops weigh 0.8-6kg; anything else is package weight or noise
+  const weightKg = weightCandidate && weightCandidate >= 0.8 && weightCandidate <= 6 ? weightCandidate : null
+
   return {
     brand,
     cpuModel: cpu?.canonical ?? null,
@@ -151,6 +156,7 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
     ramGb,
     storageGb,
     screenInches,
+    weightKg,
     resolution: resolution(resolutionValue || fullText),
     vramGb: gpu?.vramGb ?? null,
     hardExcluded: Boolean(matchedExclusion),

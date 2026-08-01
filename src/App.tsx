@@ -278,6 +278,8 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
           <span><Zap size={14} />{row.gpuModel?.replace('NVIDIA GeForce ', '').replace(' Laptop GPU', '') ?? 'GPU unknown'}</span>
           <span><MemoryStick size={14} />{row.ramGb ? `${row.ramGb} GB` : 'RAM unknown'}</span>
           <span>{row.storageGb ? `${row.storageGb >= 1024 ? `${row.storageGb / 1024} TB` : `${row.storageGb} GB`} storage` : 'Storage unknown'}</span>
+          <span>{row.screenInches ? `${row.screenInches}"${row.resolution ? ` ${row.resolution}` : ''}` : 'Screen unknown'}</span>
+          {row.weightKg != null && <span>{row.weightKg} kg</span>}
         </div>
         <p className="seller-line">{row.sellerName} · {row.sellerFeedbackPercent == null ? 'feedback unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`} · {row.location || 'location unknown'}</p>
         {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}

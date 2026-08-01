@@ -42,6 +42,7 @@ export interface ParsedLaptop {
   screenInches: number | null
   resolution: string | null
   vramGb: number | null
+  weightKg: number | null
   hardExcluded: boolean
   hardExclusionReason: string | null
   riskFlags: string[]
