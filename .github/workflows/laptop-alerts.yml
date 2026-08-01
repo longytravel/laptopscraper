@@ -5,8 +5,6 @@ on:
   schedule:
     - cron: '0 8 * * *'
       timezone: 'Europe/London'
-    - cron: '0 20 * * *'
-      timezone: 'Europe/London'
 
 concurrency:
   group: laptop-best-buy-alerts
