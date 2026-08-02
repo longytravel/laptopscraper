@@ -60,7 +60,9 @@ jobs:
       - run: npm run build
 
       - name: Deploy verified dataset
+        id: deploy
         if: steps.freshness.outputs.fresh == 'true'
+        continue-on-error: true
         run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" > deployment-url.txt
 
       - name: Send digest after publication
@@ -79,3 +81,9 @@ jobs:
       - name: Report preserved cached dataset
         if: steps.freshness.outputs.fresh != 'true'
         run: echo "Collection used the cached fallback; deploy and Telegram were skipped."
+
+      - name: Surface a failed publication
+        if: steps.deploy.outcome == 'failure'
+        run: |
+          echo "::error::Vercel deploy failed, so the dashboard still shows older data. The Telegram digest was sent anyway. Check that the VERCEL_TOKEN secret is valid and has not expired."
+          exit 1
