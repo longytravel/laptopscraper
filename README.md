@@ -14,7 +14,7 @@ The reference machine is:
 
 A recommendation must be a complete working laptop, cost no more than £3,000 advertised, have at least 64 GB RAM and 1 TB storage, pass the RTX 4060 graphics floor, and have neither lower multi-core nor lower single-thread CPU performance than the G16. An unresolved specification conflict keeps a listing out of recommendations.
 
-Postage is deliberately excluded from filtering, ranking and recommendation wording. The system ranks the advertised item price only.
+Postage is deliberately excluded from filtering, ranking and recommendation wording. Ranking uses the advertised item price, less a credit for RAM and storage carried above the replacement floor.
 
 Listings with missing or conflicting evidence stay in the separate **Needs info** view and are never sent as buying recommendations.
 
@@ -26,10 +26,15 @@ All comparisons use the G16 as `100`:
 multiCore = 100 × candidateMultiCore / G16MultiCore
 singleThread = 100 × candidateSingleThread / G16SingleThread
 workPerformance = 100 × (multiCore / 100)^0.70 × (singleThread / 100)^0.30
-workValue = (workPerformance / advertisedPrice) / (100 / 1170)
+
+surplusCredit = max(0, ramGb - 64) × £2.50 + max(0, storageGb - 1024) × £0.06
+effectivePrice = max(£1, advertisedPrice - surplusCredit)
+workValue = (workPerformance / effectivePrice) / (100 / 1170)
 ```
 
-Multi-core receives 70% because local optimizer work can run across parallel CPU workers. Single-thread receives 30% because each trial and serial phase still depends on one thread. GPU speed above the RTX 4060 floor has zero ranking weight. RAM and storage are gates shown separately, not artificial power multipliers.
+Multi-core receives 70% because local optimizer work can run across parallel CPU workers. Single-thread receives 30% because each trial and serial phase still depends on one thread. GPU speed above the RTX 4060 floor has zero ranking weight.
+
+RAM and storage above the floor never touch `workPerformance`, because more of either does not make a single backtest run faster. They earn credit through `effectivePrice` instead: surplus hardware saves you buying the part separately, so it comes off the price that value is measured against, at street cost (DDR5 SO-DIMM ~£2.50/GB, NVMe ~£0.06/GB). `workPerformance` therefore stays an honest speed measure and is never inflated by capacity. The advertised price is still what the dashboard plots and what you pay; only the value ratio uses the credited figure.
 
 CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old.
 

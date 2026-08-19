@@ -63,7 +63,7 @@ function listingBlock(listing: LaptopListing, isNew: boolean, position: number):
     `Multi-core ${signedPercent(listing.cpuMultiPower!)} · single-thread ${signedPercent(listing.cpuSinglePower!)}`,
     `${listing.ramGb!}GB RAM · ${Math.round(listing.storageGb! / 1024)}TB storage · GPU passes the RTX 4060 floor`,
     `${listing.screenInches ? `${listing.screenInches}" screen` : 'screen size unlisted'}${listing.resolution ? ` (${listing.resolution})` : ''} · ${listing.weightKg != null ? `${listing.weightKg} kg` : 'weight unlisted'}`,
-    `Work value ${signedRatioPercent(result.workValue!)} vs your G16`,
+    `Work value ${signedRatioPercent(result.workValue!)} vs your G16${result.surplusCredit > 0 ? ` (£${result.effectivePrice.toFixed(0)} after £${result.surplusCredit.toFixed(0)} surplus RAM and storage credit)` : ''}`,
     `${condition} · ${confidence} evidence confidence · ${escapeTelegramHtml(seller)} · #${position} current best buy`,
     `<a href="${url}">View on eBay</a>`,
   ].join("\n");

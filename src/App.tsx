@@ -38,7 +38,7 @@ import {
   toggleSelection,
 } from './laptop/dashboard'
 import { createDefaultFilters } from './laptop/engine'
-import { assessBestBuy } from './laptop/best-buy'
+import { assessBestBuy, effectivePrice } from './laptop/best-buy'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
@@ -192,7 +192,7 @@ function PowerChart({
             {model.points.map((point) => {
               const isSelected = point.id === selectedId
               const isFrontier = model.frontierIds.has(point.id)
-              const value = assessValue(point.plottedPower, point.plottedPrice)
+              const value = assessValue(point.plottedPower, point.valuePrice)
               const radius = 5 + Math.max(0, Math.min(4, point.recommendationScore / 25))
               return (
                 <circle
@@ -239,7 +239,7 @@ function PowerChart({
         {selected ? (
           <>
             <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected)}</small></div>
-            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong><span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.plottedPrice).label}</span></div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong><span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -252,7 +252,7 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
   const risk = row.riskFlags.length > 0 || row.hardExcluded
   const readiness = classifyReadiness(row)
   const assessment = assessBestBuy(row)
-  const value = assessment.workPerformance == null ? null : assessValue(assessment.workPerformance, row.price)
+  const value = assessment.workPerformance == null ? null : assessValue(assessment.workPerformance, assessment.effectivePrice)
   const readinessLabel = {
     ready: 'Passes every floor',
     'specs-incomplete': 'Not a confirmed match',
@@ -286,7 +286,7 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
         <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row)}</p>
       </div>
       <div className="listing-metrics">
-        <div><span>Advertised</span><strong>{MONEY.format(row.price)}</strong><small>ranking uses this price only</small></div>
+        <div><span>Advertised</span><strong>{MONEY.format(row.price)}</strong><small>{assessment.surplusCredit > 0 ? `value uses ${MONEY.format(assessment.effectivePrice)} after surplus credit` : 'postage is never ranked'}</small></div>
         <div className="power-number"><span>Work performance</span><strong>{assessment.workPerformance == null ? '—' : signedPercent(assessment.workPerformance)}</strong><small>multi {signedPercent(row.cpuMultiPower)} · single {signedPercent(row.cpuSinglePower)}</small></div>
         <div><span>Work value</span><strong>{value ? `${Math.round(value.ratio * 100)}%` : '—'}</strong><small>{value?.label ?? 'needs audited benchmark evidence'}</small></div>
       </div>
@@ -306,7 +306,7 @@ function ShortlistComparison({ rows, onRemove }: { rows: LaptopListing[]; onRemo
     ['Advertised price', (row) => MONEY.format(row.price)],
     ['Work performance', (row) => signedPercent(row.workPerformance)],
     ['Multi / single', (row) => `${signedPercent(row.cpuMultiPower)} / ${signedPercent(row.cpuSinglePower)}`],
-    ['Work value', (row) => row.workPerformance == null ? 'Unknown' : assessValue(row.workPerformance, row.price).label],
+    ['Work value', (row) => row.workPerformance == null ? 'Unknown' : assessValue(row.workPerformance, effectivePrice(row)).label],
     ['CPU', (row) => row.cpuModel ?? 'Unknown'],
     ['GPU', (row) => row.gpuModel ?? 'Unknown'],
     ['RAM / storage', (row) => `${row.ramGb ?? '—'} GB / ${row.storageGb ?? '—'} GB`],
@@ -370,8 +370,8 @@ function App() {
     if (sortMode === 'price') return rows.slice().sort((a, b) => chartPrice(a).price - chartPrice(b).price)
     if (sortMode === 'power') return rows.slice().sort((a, b) => (b.workPerformance ?? -1) - (a.workPerformance ?? -1))
     if (sortMode === 'value') return rows.slice().sort((a, b) => {
-      const aValue = a.workPerformance == null ? -1 : assessValue(a.workPerformance, a.price).ratio
-      const bValue = b.workPerformance == null ? -1 : assessValue(b.workPerformance, b.price).ratio
+      const aValue = a.workPerformance == null ? -1 : assessValue(a.workPerformance, effectivePrice(a)).ratio
+      const bValue = b.workPerformance == null ? -1 : assessValue(b.workPerformance, effectivePrice(b)).ratio
       return bValue - aValue
     })
     if (mode === 'shortlist') return rows
@@ -505,7 +505,7 @@ function App() {
             </div>
             <div className="result-explainer">
               {mode === 'new' && <><Sparkles size={16} />New since the last updates — every machine shown passes the complete replacement floor.</>}
-              {mode === 'matches' && <><ShieldCheck size={16} />Ranked by advertised-price work value, then evidence, seller safety, returns and condition.</>}
+              {mode === 'matches' && <><ShieldCheck size={16} />Ranked by work value on advertised price less surplus RAM and storage credit, then evidence, seller safety, returns and condition.</>}
               {mode === 'needs-checking' && <><CircleAlert size={16} />These are not recommendations: they fail a floor or still need better hardware evidence.</>}
               {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
             </div>

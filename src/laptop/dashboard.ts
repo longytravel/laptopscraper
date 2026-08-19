@@ -96,9 +96,12 @@ export function buildRecommendationReason(listing: LaptopListing): string {
   const parts = [
     `Multi-core ${signedPercent(listing.cpuMultiPower)} and single-thread ${signedPercent(listing.cpuSinglePower)}`,
     `work performance ${signedPercent(assessment.workPerformance)}`,
-    assessValue(assessment.workPerformance!, listing.price).label,
+    assessValue(assessment.workPerformance!, assessment.effectivePrice).label,
     `${listing.ramGb} GB RAM`,
   ]
+  if (assessment.surplusCredit > 0) {
+    parts.push(`£${Math.round(assessment.surplusCredit)} credited for surplus RAM and storage`)
+  }
   if (listing.returnsAccepted === true) parts.push('returns accepted')
   else if (listing.returnsAccepted === false) parts.push('no returns')
   return `${parts.join(', ')}.`
@@ -169,13 +172,24 @@ export interface ChartListing extends LaptopListing {
   plottedPrice: number
   priceCertainty: PriceCertainty
   plottedPower: number
+  /** Advertised price less surplus RAM and storage credit — what value is measured against. */
+  valuePrice: number
+  surplusCredit: number
 }
 
 export function buildChartModel(listings: LaptopListing[]) {
   const points: ChartListing[] = listings.flatMap((listing) => {
     const plottedPower = listing.workPerformance
     if (plottedPower == null) return []
-    return [{ ...listing, plottedPrice: listing.price, priceCertainty: 'exact' as const, plottedPower }]
+    const assessment = assessBestBuy(listing)
+    return [{
+      ...listing,
+      plottedPrice: listing.price,
+      priceCertainty: 'exact' as const,
+      plottedPower,
+      valuePrice: assessment.effectivePrice,
+      surplusCredit: assessment.surplusCredit,
+    }]
   })
   const highest = Math.max(100, ...points.map((point) => point.plottedPower))
   const lowest = Math.min(100, ...points.map((point) => point.plottedPower))
@@ -190,6 +204,13 @@ export function buildChartModel(listings: LaptopListing[]) {
     exactPointCount: points.length,
     lowerBoundPointCount: 0,
     frontierIds: new Set(frontier.map((point) => point.id)),
-    frontier: frontier.map((point) => ({ ...point, plottedPrice: point.price, priceCertainty: 'exact' as const, plottedPower: point.workPerformance! })),
+    frontier: frontier.map((point) => ({
+      ...point,
+      plottedPrice: point.price,
+      priceCertainty: 'exact' as const,
+      plottedPower: point.workPerformance!,
+      valuePrice: assessBestBuy(point).effectivePrice,
+      surplusCredit: assessBestBuy(point).surplusCredit,
+    })),
   }
 }
