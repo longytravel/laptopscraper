@@ -87,7 +87,11 @@ export async function fetchJsonWithRetry<T>(
       if (response.ok) return await response.json() as T
       const body = (await response.text()).slice(0, 500)
       const error = new Error(`eBay request failed with HTTP ${response.status}: ${body}`)
-      const transient = response.status === 429 || response.status >= 500
+      // errorId 2001 is the daily call-quota being spent, not burst throttling.
+      // It cannot recover inside this run, and every retry spends another call
+      // from the quota that the next run needs, so fail straight away.
+      const quotaExhausted = response.status === 429 && /"errorId"\s*:\s*2001\b/.test(body)
+      const transient = !quotaExhausted && (response.status === 429 || response.status >= 500)
       if (!transient || attempt === retries) throw error
       const retryAfter = Number(response.headers.get('Retry-After'))
       const delay = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 250 * 2 ** attempt

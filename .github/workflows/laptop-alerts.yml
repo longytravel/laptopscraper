@@ -3,7 +3,12 @@ name: Laptop best-buy alerts
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *'
+    # The eBay Browse quota resets at 07:00 UTC, which is 08:00 Europe/London in
+    # summer. Starting exactly on that boundary raced the reset, so both the
+    # morning and evening runs sit clear of it.
+    - cron: '30 8 * * *'
+      timezone: 'Europe/London'
+    - cron: '30 20 * * *'
       timezone: 'Europe/London'
 
 concurrency:
@@ -78,9 +83,11 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: refresh laptop alerts"
           git push
 
-      - name: Report preserved cached dataset
+      - name: Fail loudly on a preserved cached dataset
         if: steps.freshness.outputs.fresh != 'true'
-        run: echo "Collection used the cached fallback; deploy and Telegram were skipped."
+        run: |
+          echo "::error::eBay collection fell back to the cached dataset, so no dashboard update and no Telegram digest were produced. The usual cause is the shared eBay Browse quota (5,000 calls/day, resets 07:00 UTC) being exhausted by another application using the same EBAY_CLIENT_ID. Check https://developer.ebay.com/my/analytics for remaining calls."
+          exit 1
 
       - name: Surface a failed publication
         if: steps.deploy.outcome == 'failure'
