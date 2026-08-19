@@ -9,11 +9,24 @@ export const G16_REFERENCE = {
   storageGb: 1024,
 } as const
 
+/**
+ * Street cost of the surplus hardware a listing carries above the G16 floor.
+ * RAM and storage above the floor do not make a backtest faster, so they never
+ * touch work performance; they save you buying the parts separately, so they
+ * come off the price the value ratio is measured against.
+ */
+export const SURPLUS_CREDIT = {
+  ramGbpPerGb: 2.5,
+  storageGbpPerGb: 0.06,
+} as const
+
 export interface BestBuyAssessment {
   eligible: boolean
   failures: string[]
   workPerformance: number | null
   workValue: number | null
+  surplusCredit: number
+  effectivePrice: number
 }
 
 function round(value: number, digits = 3): number {
@@ -26,9 +39,20 @@ export function workPerformance(multiPower: number | null, singlePower: number |
   return round(100 * (multiPower / 100) ** 0.70 * (singlePower / 100) ** 0.30)
 }
 
-export function workValueRatio(power: number | null, advertisedPrice: number): number | null {
-  if (power == null || advertisedPrice <= 0) return null
-  return round((power / advertisedPrice) / (100 / G16_REFERENCE.advertisedPrice))
+export function surplusCredit(ramGb: number | null | undefined, storageGb: number | null | undefined): number {
+  const ram = Math.max(0, (ramGb ?? 0) - G16_REFERENCE.ramGb) * SURPLUS_CREDIT.ramGbpPerGb
+  const storage = Math.max(0, (storageGb ?? 0) - G16_REFERENCE.storageGb) * SURPLUS_CREDIT.storageGbpPerGb
+  return round(ram + storage, 2)
+}
+
+/** Advertised price less the market cost of surplus RAM and storage. Never below £1. */
+export function effectivePrice(listing: Pick<LaptopListing, 'price' | 'ramGb' | 'storageGb'>): number {
+  return round(Math.max(1, listing.price - surplusCredit(listing.ramGb, listing.storageGb)), 2)
+}
+
+export function workValueRatio(power: number | null, price: number): number | null {
+  if (power == null || price <= 0) return null
+  return round((power / price) / (100 / G16_REFERENCE.advertisedPrice))
 }
 
 function hasUnresolvedConflict(listing: LaptopListing): boolean {
@@ -53,11 +77,16 @@ export function assessBestBuy(listing: LaptopListing): BestBuyAssessment {
   if (hasUnresolvedConflict(listing)) failures.push('unresolved specification conflict')
   if (listing.price > 3000) failures.push('price above £3,000')
 
+  const credit = surplusCredit(listing.ramGb, listing.storageGb)
+  const priced = effectivePrice(listing)
+
   return {
     eligible: failures.length === 0,
     failures,
     workPerformance: power,
-    workValue: workValueRatio(power, listing.price),
+    workValue: workValueRatio(power, priced),
+    surplusCredit: credit,
+    effectivePrice: priced,
   }
 }
 
@@ -66,11 +95,11 @@ function dominates(a: LaptopListing, b: LaptopListing): boolean {
   const bAssessment = assessBestBuy(b)
   if (!aAssessment.eligible || !bAssessment.eligible) return false
 
-  const noWorse = a.price <= b.price
+  const noWorse = aAssessment.effectivePrice <= bAssessment.effectivePrice
     && aAssessment.workPerformance! >= bAssessment.workPerformance!
     && (a.ramGb ?? 0) >= (b.ramGb ?? 0)
     && (a.storageGb ?? 0) >= (b.storageGb ?? 0)
-  const strictlyBetter = a.price < b.price
+  const strictlyBetter = aAssessment.effectivePrice < bAssessment.effectivePrice
     || aAssessment.workPerformance! > bAssessment.workPerformance!
     || (a.ramGb ?? 0) > (b.ramGb ?? 0)
     || (a.storageGb ?? 0) > (b.storageGb ?? 0)
@@ -104,7 +133,7 @@ export function rankBestBuys(listings: LaptopListing[]): LaptopListing[] {
       || (b.sellerFeedbackScore ?? 0) - (a.sellerFeedbackScore ?? 0)
       || Number(b.returnsAccepted === true) - Number(a.returnsAccepted === true)
       || conditionRank(b.condition) - conditionRank(a.condition)
-      || a.price - b.price
+      || aAssessment.effectivePrice - bAssessment.effectivePrice
       || a.id.localeCompare(b.id)
   })
 }

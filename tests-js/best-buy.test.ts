@@ -4,7 +4,9 @@ import test from 'node:test'
 import {
   assessBestBuy,
   bestBuyFrontier,
+  effectivePrice,
   rankBestBuys,
+  surplusCredit,
   workPerformance,
   workValueRatio,
 } from '../src/laptop/best-buy.ts'
@@ -69,7 +71,28 @@ test('ignores postage and GPU uplift while enforcing every replacement floor', (
 
   assert.equal(result.eligible, true)
   assert.equal(result.workPerformance, 120.616)
-  assert.equal(result.workValue, workValueRatio(120.616, 2100))
+  // 1 TB of surplus storage at £0.06/GB, no surplus RAM.
+  assert.equal(result.surplusCredit, 61.44)
+  assert.equal(result.effectivePrice, 2038.56)
+  assert.equal(result.workValue, workValueRatio(120.616, 2038.56))
+})
+
+test('credits surplus RAM and storage at market cost, never below the floor', () => {
+  assert.equal(surplusCredit(64, 1024), 0)
+  assert.equal(surplusCredit(32, 512), 0)
+  assert.equal(surplusCredit(128, 1024), 160)
+  assert.equal(surplusCredit(128, 6144), 467.2)
+  assert.equal(surplusCredit(null, null), 0)
+})
+
+test('measures value against the credited price while leaving work performance untouched', () => {
+  const spacious = makeListing({ price: 2849, cpuMultiPower: 100, cpuSinglePower: 100, ramGb: 128, storageGb: 6144 })
+  const result = assessBestBuy(spacious)
+
+  assert.equal(effectivePrice(spacious), 2381.8)
+  assert.equal(result.workPerformance, 100, 'surplus hardware must never inflate the speed measure')
+  assert.equal(result.workValue, workValueRatio(100, 2381.8))
+  assert.ok(result.workValue! > workValueRatio(100, 2849)!)
 })
 
 test('rejects a downgrade in either CPU dimension', () => {
