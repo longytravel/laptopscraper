@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-08-19T20:02:18.503Z",
+  "refreshedAt": "2026-08-20T20:26:04.874Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -381,15 +381,14 @@
     "gpu:NVIDIA GeForce RTX 5070 Laptop GPU": {
       "kind": "gpu",
       "canonical": "NVIDIA GeForce RTX 5070 Laptop GPU",
-      "graphicsScore": 19077,
-      "sampleCount": 3032,
+      "graphicsScore": 19046,
+      "sampleCount": 3230,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.videocardbenchmark.net/video_lookup.php?gpu=GeForce%20RTX%205070%20Laptop%20GPU&id=6260",
-      "observedAt": "2026-08-01",
-      "retrievedAt": "2026-08-01T14:33:58.860Z",
-      "status": "stale",
-      "providerVersion": "passmark-html-v1",
-      "lastError": "Benchmark refresh failed"
+      "observedAt": "2026-08-20",
+      "retrievedAt": "2026-08-20T20:26:04.874Z",
+      "status": "validated",
+      "providerVersion": "passmark-html-v1"
     },
     "gpu:NVIDIA GeForce RTX 4070 Laptop GPU": {
       "kind": "gpu",
@@ -485,6 +484,19 @@
       "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=Intel%20Core%20Ultra%207%20255H",
       "observedAt": "2026-08-01",
       "retrievedAt": "2026-08-01T14:33:58.860Z",
+      "status": "validated",
+      "providerVersion": "passmark-html-v1"
+    },
+    "cpu:AMD Ryzen 9 7845HX": {
+      "kind": "cpu",
+      "canonical": "AMD Ryzen 9 7845HX",
+      "multiCoreScore": 44419,
+      "singleThreadScore": 3899,
+      "sampleCount": 842,
+      "sourceName": "PassMark",
+      "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=AMD%20Ryzen%209%207845HX",
+      "observedAt": "2026-08-20",
+      "retrievedAt": "2026-08-20T20:26:04.874Z",
       "status": "validated",
       "providerVersion": "passmark-html-v1"
     }
