@@ -130,6 +130,40 @@ export async function getEbayAppToken(
   return payload.access_token
 }
 
+const RATE_LIMIT_URL = 'https://api.ebay.com/developer/analytics/v1_beta/rate_limit/?api_context=buy'
+
+/**
+ * Calls left today on the Browse resource, or null when eBay will not say.
+ * Both scheduled runs share one 5,000/day allowance that resets at 07:00 UTC,
+ * so the collector sizes its detail fetching against whatever is actually left
+ * rather than a fixed guess.
+ */
+export async function getBrowseCallsRemaining(options: {
+  token: string
+  fetchImpl?: typeof fetch
+}): Promise<number | null> {
+  try {
+    const response = await (options.fetchImpl ?? fetch)(RATE_LIMIT_URL, {
+      headers: { Authorization: `Bearer ${options.token}` },
+    })
+    if (!response.ok) return null
+    const payload = await response.json() as {
+      rateLimits?: Array<{ resources?: Array<{ name?: string; rates?: Array<{ remaining?: number }> }> }>
+    }
+    for (const limit of payload.rateLimits ?? []) {
+      for (const resource of limit.resources ?? []) {
+        if (resource.name !== 'buy.browse') continue
+        for (const rate of resource.rates ?? []) {
+          if (typeof rate.remaining === 'number') return rate.remaining
+        }
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function deduplicateItems(items: EbaySearchItem[]): Array<EbaySearchItem & { searchTerms: string[] }> {
   const byId = new Map<string, EbaySearchItem & { searchTerms: string[] }>()
   for (const item of items) {
