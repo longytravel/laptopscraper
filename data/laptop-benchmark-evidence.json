@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-08-20T20:26:04.874Z",
+  "refreshedAt": "2026-08-20T20:38:56.257Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -225,13 +225,13 @@
     "cpu:Intel Core i7-13650HX": {
       "kind": "cpu",
       "canonical": "Intel Core i7-13650HX",
-      "multiCoreScore": 30112,
-      "singleThreadScore": 3741,
-      "sampleCount": 3369,
+      "multiCoreScore": 30051,
+      "singleThreadScore": 3740,
+      "sampleCount": 3455,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=Intel%20Core%20i7-13650HX",
-      "observedAt": "2026-08-01",
-      "retrievedAt": "2026-08-01T14:33:58.860Z",
+      "observedAt": "2026-08-20",
+      "retrievedAt": "2026-08-20T20:38:56.257Z",
       "status": "validated",
       "providerVersion": "passmark-html-v1"
     },
