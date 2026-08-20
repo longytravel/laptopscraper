@@ -64,11 +64,10 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
-      - name: Deploy verified dataset
-        id: deploy
-        if: steps.freshness.outputs.fresh == 'true'
-        continue-on-error: true
-        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" > deployment-url.txt
+      # Vercel deploys this project straight from its GitHub integration, so the
+      # commit at the end of this job publishes the dashboard on its own. The CLI
+      # deploy that used to sit here needed a VERCEL_TOKEN that has since expired,
+      # and its failure was the only thing marking otherwise healthy runs as red.
 
       - name: Send digest after publication
         if: steps.freshness.outputs.fresh == 'true'
@@ -89,8 +88,15 @@ jobs:
           echo "::error::eBay collection fell back to the cached dataset, so no dashboard update and no Telegram digest were produced. The usual cause is the shared eBay Browse quota (5,000 calls/day, resets 07:00 UTC) being exhausted by another application using the same EBAY_CLIENT_ID. Check https://developer.ebay.com/my/analytics for remaining calls."
           exit 1
 
-      - name: Surface a failed publication
-        if: steps.deploy.outcome == 'failure'
+      - name: Confirm the dashboard is serving this run's data
+        if: steps.freshness.outputs.fresh == 'true'
         run: |
-          echo "::error::Vercel deploy failed, so the dashboard still shows older data. The Telegram digest was sent anyway. Check that the VERCEL_TOKEN secret is valid and has not expired."
+          expected=$(node -p "require('./public/data/laptop-listings.json').generatedAt")
+          for attempt in 1 2 3 4 5 6; do
+            live=$(curl -fsS https://laptopscraper.vercel.app/data/laptop-listings.json | node -p "JSON.parse(require('node:fs').readFileSync(0,'utf8')).generatedAt" 2>/dev/null || echo none)
+            if [ "$live" = "$expected" ]; then echo "Dashboard is serving $live"; exit 0; fi
+            echo "Attempt $attempt: dashboard still on $live, waiting for the Vercel build."
+            sleep 30
+          done
+          echo "::error::The dashboard is still not serving $expected after three minutes. The Telegram digest was sent. Check the Vercel GitHub integration is still connected to this repository."
           exit 1
