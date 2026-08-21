@@ -144,6 +144,9 @@ function PowerChart({
   const innerHeight = height - pad.top - pad.bottom
   const x = (price: number) => pad.left + (price / 3000) * innerWidth
   const y = (power: number) => pad.top + (1 - (power - model.yDomain[0]) / (model.yDomain[1] - model.yDomain[0])) * innerHeight
+  // Clamped so a much faster machine widening the y-axis can never push the
+  // label off the bottom of the plot.
+  const baselineLabelY = Math.min(y(100) + 10, pad.top + innerHeight - 30)
   const xTicks = [0, 500, 1000, 1500, 2000, 2500, 3000]
   const yStep = Math.max(10, Math.ceil((model.yDomain[1] - model.yDomain[0]) / 6 / 10) * 10)
   const yTicks: number[] = []
@@ -218,8 +221,11 @@ function PowerChart({
             })}
           </g>
           <g className="baseline-label" aria-hidden="true">
-            <rect x={x(BASELINE_PRICE) + 8} y={y(100) - 30} width="173" height="24" rx="2" />
-            <text x={x(BASELINE_PRICE) + 17} y={y(100) - 14}>YOUR G16 · £1,170 · 100</text>
+            {/* Sits below the baseline line: every qualifying listing scores at
+                least 100, so the band underneath is always empty, while the band
+                above is where the cheapest near-baseline machines plot. */}
+            <rect x={x(BASELINE_PRICE) + 8} y={baselineLabelY} width="173" height="24" rx="2" />
+            <text x={x(BASELINE_PRICE) + 17} y={baselineLabelY + 16}>YOUR G16 · £1,170 · 100</text>
           </g>
         </svg>
       )}

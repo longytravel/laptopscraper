@@ -194,6 +194,8 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .listing-point:hover, .listing-point:focus { opacity: 1; stroke: var(--carbon); }
 .listing-point.is-frontier { fill: var(--green); stroke: #d9fff4; stroke-width: 3; opacity: 1; }
 .listing-point.is-selected { fill: var(--thermal); stroke: var(--carbon); stroke-width: 3; opacity: 1; }
+/* Never let the label swallow a hover or click meant for a listing dot. */
+.baseline-label { pointer-events: none; }
 .baseline-label rect { fill: var(--thermal); }
 .baseline-label text { fill: white; font: 600 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; }
 .chart-counts { justify-content: flex-end; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; color: var(--muted); font-size: 9px; }
