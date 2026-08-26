@@ -91,6 +91,18 @@ jobs:
           echo "::error::eBay collection fell back to the cached dataset, so no dashboard update and no Telegram digest were produced. The usual cause is the shared eBay Browse quota (5,000 calls/day, resets 07:00 UTC) being exhausted by another application using the same EBAY_CLIENT_ID. Check https://developer.ebay.com/my/analytics for remaining calls."
           exit 1
 
+      # A cancelled job — a timeout, most often — skips every remaining step, so
+      # the cached-fallback guard below never fires and the outage is silent.
+      # Telegram is the channel actually watched, so failures go there too.
+      - name: Warn on Telegram when a run does not finish
+        if: ${{ failure() || cancelled() }}
+        run: |
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=⚠️ Laptop finder did not finish (${{ job.status }}). No dashboard update or digest today. ${run_url}" \
+            > /dev/null || echo "::warning::Could not deliver the failure notice to Telegram."
+
       - name: Confirm the dashboard is serving this run's data
         if: steps.freshness.outputs.fresh == 'true'
         run: |
