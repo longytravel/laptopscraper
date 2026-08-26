@@ -86,7 +86,21 @@ function changedByMerge(before: LaptopListing, after: LaptopListing): boolean {
   })
 }
 
+/**
+ * A provider-level block — spent credits, a dead key, a suspended org. Retrying
+ * cannot clear it and neither can the next listing, so the run stops asking.
+ * These arrive as 429s alongside ordinary rate limiting, which is why the
+ * message is inspected rather than the status alone.
+ */
+export function isProviderBlocked(error: unknown): boolean {
+  const status = typeof error === 'object' && error && 'status' in error ? Number((error as { status?: number }).status) : 0
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  if (status === 401 || status === 403) return true
+  return /no credits remaining|insufficient_quota|exceeded your current quota|billing|payment required|invalid[_ ]api[_ ]key/i.test(message)
+}
+
 function isTransient(error: unknown): boolean {
+  if (isProviderBlocked(error)) return false
   const status = typeof error === 'object' && error && 'status' in error ? Number((error as { status?: number }).status) : 0
   const name = error instanceof Error ? error.name : ''
   return name === 'ZodError' || status === 408 || status === 409 || status === 429 || status >= 500
@@ -118,6 +132,8 @@ export async function runAiEnrichment(
     .map((entry) => entry.listing)
   const stats: AiRunStats = { requested: 0, cached: 0, skipped: 0, succeeded: 0, failed: 0, merged: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
   const failures: Array<{ id: string; error: string }> = []
+  let providerBlocked = false
+  let providerBlockedReason: string | null = null
   let nextIndex = 0
   let completed = 0
   let checkpointChain = Promise.resolve()
@@ -148,6 +164,11 @@ export async function runAiEnrichment(
     try {
       if (entry) {
         stats.cached += 1
+      } else if (providerBlocked) {
+        // The provider has already refused this run outright. Asking again just
+        // burns time, so every remaining listing keeps its deterministic evidence.
+        stats.skipped += 1
+        return
       } else if (stats.requested >= maxRequests) {
         // Budget spent. Leave the listing on its deterministic evidence; a later
         // run picks it up once the higher-priority listings are cached.
@@ -181,6 +202,10 @@ export async function runAiEnrichment(
       if (changedByMerge(listing, merged)) stats.merged += 1
       listings[index] = merged
     } catch (error) {
+      if (isProviderBlocked(error) && !providerBlocked) {
+        providerBlocked = true
+        providerBlockedReason = error instanceof Error ? error.message : String(error)
+      }
       stats.failed += 1
       failures.push({ id: listing.id, error: error instanceof Error ? error.message : String(error) })
     } finally {
@@ -223,5 +248,5 @@ export async function runAiEnrichment(
     listings,
   }
 
-  return { dataset: enrichedDataset, cache, stats, failures }
+  return { dataset: enrichedDataset, cache, stats, failures, providerBlocked, providerBlockedReason }
 }

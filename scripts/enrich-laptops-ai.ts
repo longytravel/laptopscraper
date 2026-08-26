@@ -65,9 +65,23 @@ export async function main(): Promise<void> {
   console.log(`AI enrichment complete: requested ${result.stats.requested}, cached ${result.stats.cached}, succeeded ${result.stats.succeeded}, failed ${result.stats.failed}, materially improved ${result.stats.merged}.`)
   console.log(`Usage: ${result.stats.inputTokens} input + ${result.stats.outputTokens} output tokens. Estimated cost: $${estimatedCost.toFixed(4)} at configured rates ($${inputPricePerMillion}/M input, $${outputPricePerMillion}/M output; defaults checked 2026-07-22).`)
 
+  // AI evidence is an enhancement over the deterministic extraction, not a
+  // dependency of it. The dataset above is already written and usable, so a
+  // provider outage must not stop the dashboard publishing or the digest
+  // sending — that turns a degraded run into no run at all.
+  if (result.providerBlocked) {
+    console.error(`::warning::AI evidence was skipped this run: ${result.providerBlockedReason}`)
+    console.error(`Listings keep their deterministic evidence; ${result.stats.skipped} were not enriched. Ranking, the dashboard and the digest all continue. Top up at https://platform.openai.com/settings/organization/billing to restore the extra evidence.`)
+    return
+  }
+
   if (result.failures.length) {
     for (const failure of result.failures.slice(0, 20)) console.error(`${failure.id}: ${failure.error}`)
-    process.exitCode = 1
+    const failureRate = result.stats.requested === 0 ? 0 : result.failures.length / result.stats.requested
+    console.error(`::warning::${result.failures.length} of ${result.stats.requested} AI requests failed.`)
+    // Only a wholesale collapse is worth failing on; scattered failures leave
+    // the dataset perfectly publishable.
+    if (failureRate === 1 && result.stats.succeeded === 0 && result.stats.cached === 0) process.exitCode = 1
   }
 }
 
