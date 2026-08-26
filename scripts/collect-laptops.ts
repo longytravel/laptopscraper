@@ -202,6 +202,17 @@ async function main(): Promise<void> {
     .slice(0, maxDetails)
     .map((entry) => entry.item)
 
+  // A budget too small to fetch a meaningful slice must preserve the previous
+  // dataset, never publish a thin or empty one. Writing zero listings marked
+  // "fresh" passes the freshness gate, empties the dashboard and sends a digest
+  // with nothing in it — strictly worse than serving yesterday's data.
+  const minViableDetails = Number(process.env.EBAY_LAPTOP_MIN_DETAILS ?? 100)
+  if (candidates.length < minViableDetails) {
+    const reason = `Browse quota leaves room for only ${candidates.length} detail lookups (remaining ${remainingCalls ?? 'unknown'}, reserve ${reserve}), below the ${minViableDetails} needed for a usable refresh.`
+    if (await preserveRecentCache(outputPath, reason)) return
+    throw new Error(`${reason} No recent cached dataset to fall back on.`)
+  }
+
   if (candidates.length < affordable.length) {
     console.warn(`Detail budget covered ${candidates.length} of ${affordable.length} candidates (Browse calls remaining: ${remainingCalls ?? 'unknown'}, reserve ${reserve}). Listings beyond the budget were not fetched.`)
   }
@@ -213,6 +224,13 @@ async function main(): Promise<void> {
     .map((raw) => enrichListing(raw))
     .filter((listing) => listing.price > 0 && listing.price <= 3000 && (listing.deliveredPrice == null || listing.deliveredPrice <= 3000))
     .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))), collectedAt)
+
+  // Last line of defence, whatever emptied the results upstream.
+  if (listings.length === 0) {
+    const reason = 'Collection produced no usable listings, so the previous dataset is being kept rather than publishing an empty dashboard.'
+    if (await preserveRecentCache(outputPath, reason)) return
+    throw new Error(`${reason} No recent cached dataset to fall back on.`)
+  }
 
   const dataset: LaptopDataset = {
     schemaVersion: 7,
