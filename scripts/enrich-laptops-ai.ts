@@ -46,12 +46,13 @@ export async function main(): Promise<void> {
   console.log(`Enriching ${dataset.listings.length} listings with ${AI_MODEL} (${AI_PROMPT_VERSION}, medium effort).`)
 
   const result = await runAiEnrichment(dataset, client, cache, {
-    concurrency: 4,
+    concurrency: Number(process.env.LAPTOP_AI_CONCURRENCY ?? 8),
+    maxRequests: Number(process.env.LAPTOP_AI_MAX_REQUESTS ?? 600),
     retries: 3,
     onCheckpoint: (nextCache) => writeJsonAtomic(CACHE_PATH, nextCache),
     onProgress: (completed, total, stats) => {
-      if (completed === total || completed % 10 === 0) {
-        console.log(`${completed}/${total} · API ${stats.succeeded}/${stats.requested} · cache ${stats.cached} · failed ${stats.failed}`)
+      if (completed === total || completed % 25 === 0) {
+        console.log(`${completed}/${total} · API ${stats.succeeded}/${stats.requested} · cache ${stats.cached} · skipped ${stats.skipped} · failed ${stats.failed}`)
       }
     },
   })

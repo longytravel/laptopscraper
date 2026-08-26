@@ -21,7 +21,10 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The widened search collects several times more listings than it used to,
+    # so the old 45 minutes no longer covered a full refresh. The AI step is
+    # separately capped per run, which is what actually bounds the duration.
+    timeout-minutes: 90
     env:
       EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
       EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}

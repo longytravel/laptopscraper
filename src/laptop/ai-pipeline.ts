@@ -29,6 +29,8 @@ export interface AiEnrichmentCache {
 export interface AiRunStats {
   requested: number
   cached: number
+  /** Left on deterministic evidence because the run's request budget was spent. */
+  skipped: number
   succeeded: number
   failed: number
   merged: number
@@ -40,6 +42,14 @@ export interface AiRunStats {
 export interface AiPipelineOptions {
   concurrency?: number
   retries?: number
+  /**
+   * Cap on uncached model requests in a single run. Cache hits are free and do
+   * not count. Widening the eBay search multiplied the listing count, and an
+   * uncapped run outgrew the workflow's job timeout, so each run now spends a
+   * bounded budget on the listings most likely to qualify and lets the cache
+   * fill in the rest over subsequent runs.
+   */
+  maxRequests?: number
   onCheckpoint?: (cache: AiEnrichmentCache) => Promise<void>
   onProgress?: (completed: number, total: number, stats: AiRunStats) => void
   sleep?: (milliseconds: number) => Promise<void>
@@ -90,9 +100,23 @@ export async function runAiEnrichment(
 ) {
   const concurrency = Math.max(1, Math.min(8, options.concurrency ?? 4))
   const retries = Math.max(0, options.retries ?? 2)
+  const maxRequests = Math.max(0, options.maxRequests ?? Number.POSITIVE_INFINITY)
   const sleep = options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)))
+
+  // Spend the request budget on listings that could still clear the replacement
+  // floor. Anything already known to sit under the 64 GB gate is enriched last,
+  // because no amount of extracted evidence can make it qualify.
+  const couldQualify = (listing: LaptopListing): number => {
+    if (listing.hardExcluded) return 3
+    if (listing.ramGb != null && listing.ramGb < 64) return 2
+    if (listing.ramGb != null && listing.ramGb >= 64) return 0
+    return 1
+  }
   const listings = dataset.listings.slice()
-  const stats: AiRunStats = { requested: 0, cached: 0, succeeded: 0, failed: 0, merged: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+    .map((listing, index) => ({ listing, index, rank: couldQualify(listing) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((entry) => entry.listing)
+  const stats: AiRunStats = { requested: 0, cached: 0, skipped: 0, succeeded: 0, failed: 0, merged: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
   const failures: Array<{ id: string; error: string }> = []
   let nextIndex = 0
   let completed = 0
@@ -124,6 +148,11 @@ export async function runAiEnrichment(
     try {
       if (entry) {
         stats.cached += 1
+      } else if (stats.requested >= maxRequests) {
+        // Budget spent. Leave the listing on its deterministic evidence; a later
+        // run picks it up once the higher-priority listings are cached.
+        stats.skipped += 1
+        return
       } else {
         stats.requested += 1
         const response = await requestWithRetry(listing)
