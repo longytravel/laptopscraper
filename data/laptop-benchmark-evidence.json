@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-08-26T20:52:30.287Z",
+  "refreshedAt": "2026-08-27T18:30:35.286Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -87,8 +87,8 @@
       "sampleCount": 515,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=Intel%20Core%20i9-12900HX",
-      "observedAt": "2026-08-19",
-      "retrievedAt": "2026-08-19T20:02:18.503Z",
+      "observedAt": "2026-08-27",
+      "retrievedAt": "2026-08-27T18:30:35.286Z",
       "status": "validated",
       "providerVersion": "passmark-html-v1"
     },
