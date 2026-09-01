@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { enrichListing } from '../src/laptop/engine.ts'
 import { AI_MODEL, AI_PROMPT_VERSION, type AiResponsesClient } from '../src/laptop/ai-enrichment.ts'
-import { listingFingerprint, runAiEnrichment, type AiEnrichmentCache } from '../src/laptop/ai-pipeline.ts'
+import { cannotQualify, listingFingerprint, runAiEnrichment, type AiEnrichmentCache } from '../src/laptop/ai-pipeline.ts'
 import { isAiEnrichmentConfigured } from '../scripts/enrich-laptops-ai.ts'
 import type { LaptopDataset } from '../src/laptop/types.ts'
 
@@ -62,10 +62,10 @@ test('listing fingerprint is stable and changes with listing evidence', () => {
 })
 
 test('pipeline never reuses an old response ID when listing evidence changed', async () => {
-  const original = enrichListing({ sourceListingId: 'changed', title: 'Original laptop', description: '16 GB RAM', price: 500, shippingPrice: 0 })
+  const original = enrichListing({ sourceListingId: 'changed', title: 'Original laptop', description: '64 GB RAM', price: 500, shippingPrice: 0 })
   const changed = {
     ...original,
-    description: 'Now sold with 32 GB RAM',
+    description: 'Now sold with 96 GB RAM',
     aiEnrichment: {
       model: AI_MODEL,
       promptVersion: AI_PROMPT_VERSION,
@@ -150,6 +150,33 @@ test('pipeline reuses cache and requests only changed listings', async () => {
   assert.equal(result.dataset.listings[1].cpuModel, 'Intel Core i9-14900HX')
   assert.equal(result.dataset.listings[1].gpuModel, 'NVIDIA GeForce RTX 4070 Laptop GPU')
   assert.equal(result.dataset.aiRun?.inputTokens, 100)
+})
+
+test('pipeline spends no request on a listing already measured under a hard gate', async () => {
+  const under = enrichListing({ sourceListingId: 'under', title: 'ASUS i9-14900HX RTX 4060 laptop 32GB RAM 1TB SSD', price: 900, shippingPrice: 0 })
+  const smallDisk = enrichListing({ sourceListingId: 'disk', title: 'ASUS i9-14900HX RTX 4060 laptop 64GB RAM 512GB SSD', price: 900, shippingPrice: 0 })
+  const parts = enrichListing({ sourceListingId: 'parts', title: 'ASUS i9-14900HX laptop 64GB RAM 1TB SSD spares or repairs', price: 300, shippingPrice: 0 })
+  const open = enrichListing({ sourceListingId: 'open', title: 'ASUS gaming laptop', price: 900, shippingPrice: 0 })
+  assert.equal(cannotQualify(under), true)
+  assert.equal(cannotQualify(smallDisk), true)
+  assert.equal(cannotQualify(parts), true)
+  assert.equal(cannotQualify(open), false)
+
+  const asked: string[] = []
+  const client: AiResponsesClient = { responses: { parse: async (request) => {
+    asked.push(String((request.input as Array<{ content: string }>)[1].content))
+    return { id: 'r', output_parsed: blankExtraction }
+  } } }
+
+  const result = await runAiEnrichment(dataset([under, smallDisk, parts, open]), client, { version: 1, entries: {} }, { concurrency: 1 })
+
+  assert.equal(result.stats.requested, 1)
+  assert.equal(result.stats.unqualifiable, 3)
+  assert.equal(asked.length, 1)
+  assert.match(asked[0], /ASUS gaming laptop/)
+  assert.equal(result.dataset.aiRun?.unqualifiable, 3)
+  // Untouched listings keep their deterministic evidence exactly.
+  assert.deepEqual(result.dataset.listings.find((row) => row.id === 'under'), under)
 })
 
 test('pipeline records a failed request without mutating the listing', async () => {

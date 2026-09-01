@@ -10,6 +10,7 @@ import {
   type AiListingExtraction,
   type AiResponsesClient,
 } from './ai-enrichment'
+import { G16_REFERENCE } from './best-buy'
 import type { LaptopDataset, LaptopListing } from './types'
 
 export interface AiCacheEntry {
@@ -31,6 +32,8 @@ export interface AiRunStats {
   cached: number
   /** Left on deterministic evidence because the run's request budget was spent. */
   skipped: number
+  /** Never requested: already measured under a hard gate that AI evidence cannot lift. */
+  unqualifiable: number
   succeeded: number
   failed: number
   merged: number
@@ -53,6 +56,20 @@ export interface AiPipelineOptions {
   onCheckpoint?: (cache: AiEnrichmentCache) => Promise<void>
   onProgress?: (completed: number, total: number, stats: AiRunStats) => void
   sleep?: (milliseconds: number) => Promise<void>
+}
+
+/**
+ * Whether a listing is already out of the running before any model call. The
+ * merge never overrides a deterministic value with an AI claim, so a listing
+ * whose own text or aspects put it under the RAM or storage floor, or mark it
+ * as parts or faulty, cannot be rescued by more evidence. Around four listings
+ * in five fall here, and paying to enrich them buys nothing.
+ */
+export function cannotQualify(listing: LaptopListing): boolean {
+  return listing.hardExcluded
+    || (listing.ramGb != null && listing.ramGb < G16_REFERENCE.ramGb)
+    || (listing.storageGb != null && listing.storageGb < G16_REFERENCE.storageGb)
+    || listing.price > 3000
 }
 
 export function listingFingerprint(listing: LaptopListing): string {
@@ -130,7 +147,7 @@ export async function runAiEnrichment(
     .map((listing, index) => ({ listing, index, rank: couldQualify(listing) }))
     .sort((a, b) => a.rank - b.rank || a.index - b.index)
     .map((entry) => entry.listing)
-  const stats: AiRunStats = { requested: 0, cached: 0, skipped: 0, succeeded: 0, failed: 0, merged: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+  const stats: AiRunStats = { requested: 0, cached: 0, skipped: 0, unqualifiable: 0, succeeded: 0, failed: 0, merged: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 }
   const failures: Array<{ id: string; error: string }> = []
   let providerBlocked = false
   let providerBlockedReason: string | null = null
@@ -164,6 +181,11 @@ export async function runAiEnrichment(
     try {
       if (entry) {
         stats.cached += 1
+      } else if (cannotQualify(listing)) {
+        // A cached extraction is free to apply; a new one for a listing that
+        // can never clear the floor is money for nothing.
+        stats.unqualifiable += 1
+        return
       } else if (providerBlocked) {
         // The provider has already refused this run outright. Asking again just
         // burns time, so every remaining listing keeps its deterministic evidence.
@@ -239,6 +261,8 @@ export async function runAiEnrichment(
       promptVersion: rowPromptVersions.length === 1 ? rowPromptVersions[0] : rowPromptVersions.length > 1 ? 'mixed' : AI_PROMPT_VERSION,
       requested: stats.requested,
       cached: stats.cached,
+      skipped: stats.skipped,
+      unqualifiable: stats.unqualifiable,
       succeeded: stats.succeeded,
       failed: stats.failed,
       merged: stats.merged,

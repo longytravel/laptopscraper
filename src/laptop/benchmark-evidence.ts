@@ -3,6 +3,15 @@ import type { LaptopListing } from './types'
 
 export type BenchmarkKind = 'cpu' | 'gpu'
 
+export type ProviderVersion = 'passmark-html-v1' | 'passmark-html-v2'
+
+/**
+ * v1 trusted whatever page PassMark's name search returned, which for several
+ * chips was a different processor. v2 verifies the chip named on the page, so
+ * v1 records are never treated as fresh and are re-fetched on the next refresh.
+ */
+export const CURRENT_PROVIDER_VERSION: ProviderVersion = 'passmark-html-v2'
+
 export interface BenchmarkEvidenceRecord {
   kind: BenchmarkKind
   canonical: string
@@ -11,11 +20,13 @@ export interface BenchmarkEvidenceRecord {
   graphicsScore?: number
   sourceName: 'PassMark'
   sourceUrl: string
+  /** The processor name PassMark printed on the page the scores came from. */
+  verifiedName?: string
   observedAt: string
   retrievedAt: string
   sampleCount: number | null
   status: 'validated' | 'stale' | 'failed'
-  providerVersion: 'passmark-html-v1'
+  providerVersion: ProviderVersion
   lastError?: string
 }
 
@@ -31,6 +42,7 @@ export function benchmarkKey(kind: BenchmarkKind, canonical: string): string {
 
 export function isFresh(record: BenchmarkEvidenceRecord, now: Date, maxAgeDays: number): boolean {
   if (record.status !== 'validated') return false
+  if (record.providerVersion !== CURRENT_PROVIDER_VERSION) return false
   const retrieved = Date.parse(record.retrievedAt)
   if (!Number.isFinite(retrieved)) return false
   return now.getTime() - retrieved <= maxAgeDays * 24 * 60 * 60 * 1000
@@ -101,7 +113,7 @@ export function createInitialEvidenceStore(retrievedAt = '2026-07-22T00:00:00Z')
         retrievedAt,
         sampleCount: null,
         status: 'validated',
-        providerVersion: 'passmark-html-v1',
+        providerVersion: CURRENT_PROVIDER_VERSION,
       },
       [benchmarkKey('gpu', 'NVIDIA GeForce RTX 4060 Laptop GPU')]: {
         kind: 'gpu',
@@ -113,7 +125,7 @@ export function createInitialEvidenceStore(retrievedAt = '2026-07-22T00:00:00Z')
         retrievedAt,
         sampleCount: null,
         status: 'validated',
-        providerVersion: 'passmark-html-v1',
+        providerVersion: CURRENT_PROVIDER_VERSION,
       },
     },
   }

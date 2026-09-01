@@ -6,6 +6,7 @@ import { CPU_BENCHMARKS, GPU_BENCHMARKS } from '../src/laptop/benchmarks'
 import {
   applyBenchmarkEvidence,
   createInitialEvidenceStore,
+  CURRENT_PROVIDER_VERSION,
   type BenchmarkEvidenceStore,
 } from '../src/laptop/benchmark-evidence'
 import type { LaptopDataset, LaptopListing } from '../src/laptop/types'
@@ -25,11 +26,19 @@ async function writeJsonAtomic(target: string, value: unknown): Promise<void> {
   await rename(temporary, target)
 }
 
-function sourceModels(listings: LaptopListing[]): HardwareModel[] {
+function sourceModels(listings: LaptopListing[], store: BenchmarkEvidenceStore): HardwareModel[] {
   const cpus = new Set(listings.map((listing) => listing.cpuModel).filter((model): model is string => Boolean(model)))
   const gpus = new Set(listings.map((listing) => listing.gpuModel).filter((model): model is string => Boolean(model)))
   cpus.add('Intel Core i9-14900HX')
   gpus.add('NVIDIA GeForce RTX 4060 Laptop GPU')
+  // A record scraped before the page-name check may hold another chip's scores.
+  // Re-verify it even when no current listing uses it, so a stale wrong number
+  // never sits in the store waiting for the next listing with that chip.
+  for (const record of Object.values(store.records)) {
+    if (record.providerVersion === CURRENT_PROVIDER_VERSION) continue
+    if (record.kind === 'cpu') cpus.add(record.canonical)
+    else gpus.add(record.canonical)
+  }
 
   return [
     ...[...cpus].map((canonical) => {
@@ -49,7 +58,7 @@ export async function refreshDatasetBenchmarks(
   store: BenchmarkEvidenceStore,
   options: RefreshOptions = {},
 ): Promise<{ dataset: LaptopDataset; store: BenchmarkEvidenceStore }> {
-  const refreshedStore = await refreshBenchmarkEvidence(sourceModels(dataset.listings), store, options)
+  const refreshedStore = await refreshBenchmarkEvidence(sourceModels(dataset.listings, store), store, options)
   const listings = dataset.listings.map((listing) => applyBenchmarkEvidence(listing, refreshedStore))
   const observedDate = (options.now ?? new Date()).toISOString().slice(0, 10)
   return {

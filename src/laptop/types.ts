@@ -124,6 +124,10 @@ export interface LaptopDataset {
     promptVersion: string
     requested: number
     cached: number
+    /** Uncached listings left on deterministic evidence because the run's request budget was spent. */
+    skipped?: number
+    /** Uncached listings never requested because a hard gate already rules them out. */
+    unqualifiable?: number
     succeeded: number
     failed: number
     merged: number

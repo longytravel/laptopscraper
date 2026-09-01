@@ -43,7 +43,22 @@ test('production verifier accepts a fresh internally consistent recommendation',
     staleRecommendedBenchmarks: 0,
     duplicateIds: 0,
     postageDependentRanks: 0,
+    benchmarkCollisions: 0,
   })
+})
+
+test('production verifier flags two CPUs that resolved to one PassMark record', () => {
+  const g16 = evidence.records['cpu:Intel Core i9-14900HX']
+  const collided = {
+    ...evidence,
+    records: {
+      ...evidence.records,
+      'cpu:Intel Core Ultra 9 285H': { ...g16, canonical: 'Intel Core Ultra 9 285H', multiCoreScore: 56553, singleThreadScore: 4609, sampleCount: 821 },
+      'cpu:Intel Core Ultra 9 285HX': { ...g16, canonical: 'Intel Core Ultra 9 285HX', multiCoreScore: 56553, singleThreadScore: 4609, sampleCount: 821 },
+      'cpu:Stale twin': { ...g16, canonical: 'Stale twin', multiCoreScore: 56553, singleThreadScore: 4609, sampleCount: 821, status: 'stale' as const },
+    },
+  }
+  assert.equal(verifyLaptopDataset(dataset([eligible()]), collided, NOW).benchmarkCollisions, 2)
 })
 
 test('production verifier detects stored eligibility, link, freshness and duplicate faults', () => {

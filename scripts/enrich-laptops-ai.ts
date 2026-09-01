@@ -52,7 +52,7 @@ export async function main(): Promise<void> {
     onCheckpoint: (nextCache) => writeJsonAtomic(CACHE_PATH, nextCache),
     onProgress: (completed, total, stats) => {
       if (completed === total || completed % 25 === 0) {
-        console.log(`${completed}/${total} · API ${stats.succeeded}/${stats.requested} · cache ${stats.cached} · skipped ${stats.skipped} · failed ${stats.failed}`)
+        console.log(`${completed}/${total} · API ${stats.succeeded}/${stats.requested} · cache ${stats.cached} · cannot qualify ${stats.unqualifiable} · budget skipped ${stats.skipped} · failed ${stats.failed}`)
       }
     },
   })
@@ -62,7 +62,7 @@ export async function main(): Promise<void> {
   const outputPricePerMillion = Number(process.env.LUNA_OUTPUT_PRICE_PER_MILLION ?? 1.2)
   const estimatedCost = result.stats.inputTokens * inputPricePerMillion / 1_000_000
     + result.stats.outputTokens * outputPricePerMillion / 1_000_000
-  console.log(`AI enrichment complete: requested ${result.stats.requested}, cached ${result.stats.cached}, succeeded ${result.stats.succeeded}, failed ${result.stats.failed}, materially improved ${result.stats.merged}.`)
+  console.log(`AI enrichment complete: requested ${result.stats.requested}, cached ${result.stats.cached}, left unrequested as unable to qualify ${result.stats.unqualifiable}, budget-skipped ${result.stats.skipped}, succeeded ${result.stats.succeeded}, failed ${result.stats.failed}, materially improved ${result.stats.merged}.`)
   console.log(`Usage: ${result.stats.inputTokens} input + ${result.stats.outputTokens} output tokens. Estimated cost: $${estimatedCost.toFixed(4)} at configured rates ($${inputPricePerMillion}/M input, $${outputPricePerMillion}/M output; defaults checked 2026-07-22).`)
 
   // AI evidence is an enhancement over the deterministic extraction, not a

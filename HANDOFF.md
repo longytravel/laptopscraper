@@ -1,6 +1,13 @@
 # Laptop Power Finder — context handoff
 
-Last updated: 22 July 2026 (Europe/London)
+Last updated: 1 September 2026 (Europe/London); original handoff 22 July 2026
+
+## Update, 1 September 2026
+
+- The PassMark CPU scrape trusted whatever page the name search returned. For the Core Ultra 9 285H, Core Ultra 7 255H, i9-13900H, i7-13700H, Ryzen 9 9955HX, Ryzen 9 7945HX and Ryzen 9 8945H that was a different chip's page, so a Lenovo Yoga Pro 9 (Ultra 9 285H, a slower processor than the G16) was recommended and announced on Telegram. The provider now verifies the chip named on each page, resolves mismatches through the id-pinned lookup catalogue, and refuses to store another chip's scores. `verify:laptop-dataset` fails on benchmark collisions; `audit:laptop-benchmarks` prints the full check.
+- AI enrichment no longer spends requests on listings that cannot qualify (deterministic RAM under 64 GB, storage under 1 TB, parts or faulty, over £3,000). AI never overrides deterministic values, so those requests could not change a recommendation. Steady-state OpenAI spend was about £0.05 to £0.12 per run before this; expect roughly a fifth of that.
+- Deployment is by Vercel's Git integration on the bot's commit, not the Vercel CLI; `VERCEL_TOKEN` is unused. GitHub starts the scheduled runs one to seven hours late, so digests arrive around midday and late evening.
+- The scatter chart plots only listings that pass every gate. With the strict no-downgrade rule on both CPU dimensions, no listing has beaten the G16's £1,170 work value since July; the chart is honest, not broken.
 
 This is the restart document for the laptop-finding system. A new developer or a fresh Codex context should read this file first, then inspect the files named in **Resume order**. Do not reconstruct the project from chat history.
 

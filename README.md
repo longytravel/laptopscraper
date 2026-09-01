@@ -38,6 +38,10 @@ RAM and storage above the floor never touch `workPerformance`, because more of e
 
 CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old.
 
+### Benchmark evidence integrity
+
+PassMark's name search (`cpu.php?cpu=<name>`) returns the nearest chip, not an exact match: asking for the Core Ultra 9 285H returns the 285HX page, and asking for the Ryzen 9 9955HX returns the 9955HX3D page. The provider therefore reads the processor name printed on every page and compares it with the requested chip. On a mismatch it resolves the exact model through PassMark's lookup catalogue, whose links carry a numeric `id`, and re-verifies; if no exact page exists the record is marked failed or stale, never filled with another chip's scores. Records scraped before this check (`providerVersion` `passmark-html-v1`) are treated as stale and re-fetched. `npm run verify:laptop-dataset` fails on any two validated CPUs sharing identical multi-core, single-thread and sample figures, and `npm run audit:laptop-benchmarks` prints the collision, page-name and seed-divergence checks in full.
+
 ## New listings and alerts
 
 `firstSeenAt` is retained by eBay item ID. A qualifying item is marked **NEW** for 24 hours; a relisted title with the same item ID does not become new again.
@@ -48,9 +52,10 @@ The GitHub Actions workflow runs at approximately 08:00 and 20:00 in `Europe/Lon
 2. optionally applies cached GPT-5.6 Luna evidence extraction;
 3. refreshes stale or newly required benchmarks and recalculates every score;
 4. runs tests, lint and the production build;
-5. deploys the verified dashboard to Vercel;
-6. sends Telegram only after deployment succeeds; and
-7. commits the successful dataset, benchmark cache and alert state.
+5. sends the Telegram digest; and
+6. commits the successful dataset, benchmark cache and alert state, which Vercel's Git integration publishes as the dashboard. The job then polls the live dataset until it serves this run's `generatedAt`.
+
+GitHub starts scheduled jobs when it has capacity, which in practice is one to seven hours after the cron time, so the digests land late morning and late evening rather than at 08:30 and 20:30.
 
 If eBay collection uses the cached fallback, verification still runs but deployment and Telegram are skipped. A snapshot already sent successfully is not sent twice.
 
@@ -76,6 +81,8 @@ npm run build
 ```
 
 `OPENAI_API_KEY` is optional. When absent, AI enrichment logs a skip and leaves the collected dataset unchanged before benchmark scoring continues.
+
+AI evidence only ever fills gaps; it never overrides a value the deterministic parser found. A listing whose own text or aspects already put it under 64 GB or 1 TB, mark it as parts or faulty, or price it above £3,000 therefore cannot be lifted into the recommendations by more evidence, and the pipeline does not spend a model request on it (`unqualifiable` in `aiRun`). Roughly four listings in five fall into that group. Cached extractions are still applied when present.
 GitHub Actions restores the previous ignored enrichment cache so unchanged listings do not consume model calls on every scheduled run. Local worktrees can reuse a cache by setting `LAPTOP_AI_CACHE_PATH` to its absolute path.
 
 To send a real Telegram digest after reviewing the dry run:

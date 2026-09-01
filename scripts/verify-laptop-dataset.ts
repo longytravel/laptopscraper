@@ -17,6 +17,22 @@ export interface VerificationCounts {
   staleRecommendedBenchmarks: number
   duplicateIds: number
   postageDependentRanks: number
+  /**
+   * Validated CPU records that share identical multi-core, single-thread and
+   * sample figures with another chip. Two processors never genuinely tie on all
+   * three, so a tie means one lookup resolved to the other chip's page.
+   */
+  benchmarkCollisions: number
+}
+
+export function countBenchmarkCollisions(evidence: BenchmarkEvidenceStore): number {
+  const groups = new Map<string, number>()
+  for (const record of Object.values(evidence.records)) {
+    if (record.kind !== 'cpu' || record.status !== 'validated') continue
+    const signature = `${record.multiCoreScore}|${record.singleThreadScore}|${record.sampleCount}`
+    groups.set(signature, (groups.get(signature) ?? 0) + 1)
+  }
+  return [...groups.values()].filter((size) => size > 1).reduce((sum, size) => sum + size, 0)
 }
 
 export function verifyLaptopDataset(
@@ -60,6 +76,7 @@ export function verifyLaptopDataset(
     staleRecommendedBenchmarks: stale.length,
     duplicateIds,
     postageDependentRanks: postageDependent.length,
+    benchmarkCollisions: countBenchmarkCollisions(evidence),
   }
 }
 
@@ -79,6 +96,7 @@ export async function main(): Promise<void> {
   console.log(`stale recommended benchmarks: ${counts.staleRecommendedBenchmarks}`)
   console.log(`duplicate IDs: ${counts.duplicateIds}`)
   console.log(`postage-dependent ranks: ${counts.postageDependentRanks}`)
+  console.log(`benchmark collisions: ${counts.benchmarkCollisions}`)
 
   const failures = counts.invalidRecommendations
     + counts.omittedEligible
@@ -86,6 +104,7 @@ export async function main(): Promise<void> {
     + counts.staleRecommendedBenchmarks
     + counts.duplicateIds
     + counts.postageDependentRanks
+    + counts.benchmarkCollisions
   if (failures > 0) process.exitCode = 1
 }
 
