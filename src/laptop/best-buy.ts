@@ -20,6 +20,19 @@ export const SURPLUS_CREDIT = {
   storageGbpPerGb: 0.06,
 } as const
 
+/**
+ * Indices at or above these count as matching the G16. Multi-core carries no
+ * tolerance because it is what backtesting throughput actually rides on.
+ * Single-thread and graphics are safety floors, and PassMark's own spread
+ * between samples of one chip is wider than 5%, so a 4% shortfall on either is
+ * noise, not a downgrade. This admits the Ryzen 9 7945HX class (single-thread
+ * 96) and the RTX 5060 (graphics 96) without touching the multi-core rule.
+ */
+export const GATE_TOLERANCE = {
+  singleThread: 95,
+  graphics: 95,
+} as const
+
 export interface BestBuyAssessment {
   eligible: boolean
   failures: string[]
@@ -69,11 +82,11 @@ export function assessBestBuy(listing: LaptopListing): BestBuyAssessment {
   if (multiPower == null || singlePower == null) failures.push('CPU benchmark evidence missing')
   else {
     if (multiPower < 100) failures.push('multi-core below G16')
-    if (singlePower < 100) failures.push('single-thread below G16')
+    if (singlePower < GATE_TOLERANCE.singleThread) failures.push('single-thread more than 5% below G16')
   }
   if ((listing.ramGb ?? 0) < G16_REFERENCE.ramGb) failures.push('RAM below 64 GB')
   if ((listing.storageGb ?? 0) < G16_REFERENCE.storageGb) failures.push('storage below 1 TB')
-  if ((listing.gpuPower ?? 0) < 100) failures.push('graphics below RTX 4060')
+  if ((listing.gpuPower ?? 0) < GATE_TOLERANCE.graphics) failures.push('graphics more than 5% below RTX 4060')
   if (hasUnresolvedConflict(listing)) failures.push('unresolved specification conflict')
   if (listing.price > 3000) failures.push('price above £3,000')
 

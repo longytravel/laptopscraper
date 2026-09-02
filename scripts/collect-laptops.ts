@@ -43,18 +43,22 @@ export const SEARCH_TERMS = [
   '128GB RAM laptop',
   'gaming laptop 64GB 2TB',
 
-  // by processor — only chips that actually clear the floor on BOTH dimensions,
-  // measured against the G16 in data/laptop-benchmark-evidence.json. Ryzen 9
-  // 7945HX (single-thread 97) and i9-13900HX (95/96) are downgrades and are
-  // deliberately absent; searching them spends calls on listings that can never
-  // qualify. The Ultra 7 parts pass and are cheaper than the Ultra 9 ones.
+  // by processor — only chips that clear the multi-core floor and sit within
+  // the 5% single-thread tolerance, measured against the G16 in
+  // data/laptop-benchmark-evidence.json. i9-13900HX (multi-core 95) and the
+  // Ultra 9 285H (78) are downgrades and deliberately absent; searching them
+  // spends calls on listings that can never qualify.
   'i9-14900HX laptop',
   'i9-13980HX laptop',
   'Core Ultra 9 275HX laptop',
   'Core Ultra 9 285HX laptop',
+  'Core Ultra 9 290HX laptop',
   'Core Ultra 7 265HX laptop',
   'Core Ultra 7 255HX laptop',
   'Ryzen 9 9955HX laptop',
+  'Ryzen 9 7945HX laptop',
+  'Ryzen 9 8945HX laptop',
+  'RTX 3080 Ti 64GB laptop',
 
   // by model
   'ASUS ROG Strix Scar 18',
@@ -76,6 +80,7 @@ export const SEARCH_TERMS = [
   'mobile workstation RTX 5000 Ada',
   'ThinkPad P16 workstation',
   'Dell Precision 7680',
+  'Dell Pro Max 16 Plus',
   'HP ZBook Fury 16',
 ]
 
@@ -183,8 +188,8 @@ async function main(): Promise<void> {
   // a cheap machine that clears the floor is the best possible find. What gets
   // deprioritised is hardware that cannot win: memory below the 64 GB gate, and
   // processors already measured as downgrades on either CPU dimension.
-  const DOWNGRADE_CPUS = /\b(?:7945HX|7845HX|8945H|8940HX|13900HX?|13950HX|12900HX|14700HX|14650HX|13700HX?|13650HX|7940HS|Ultra\s*9\s*185H|Ultra\s*7\s*155H|HX\s*3(?:70|75)|AI\s*9\s*365)\b/i
-  const QUALIFYING_CPUS = /\b(?:9955HX(?:3D)?|285HX?|275HX|265HX|255HX?|13980HX|14900HX)\b/i
+  const DOWNGRADE_CPUS = /\b(?:7845HX|8945H|8940HX|13900HX?|13950HX|12900HX|14700HX|14650HX|13700HX?|13650HX|7940HS|Ultra\s*9\s*(?:185H|285H)|Ultra\s*7\s*(?:155H|255H|265H)|Ultra\s*5\s*235HX|HX\s*3(?:70|75)|AI\s*9\s*365)\b/i
+  const QUALIFYING_CPUS = /\b(?:9955HX(?:3D)?|9850HX|8945HX|7945HX(?:3D)?|290HX|285HX|275HX|270HX|265HX|255HX|251HX|13980HX|14900HX|AI\s*Max\+?\s*395)\b/i
 
   const capabilitySignal = (item: EbaySearchItem): number => {
     const title = String(item.title ?? '')

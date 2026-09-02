@@ -267,7 +267,8 @@ test('refreshes distinct dataset hardware and writes authoritative best-buy fiel
 
   const result = await refreshDatasetBenchmarks(dataset, baseline, {
     now: new Date('2026-07-22T01:00:00Z'),
-    fetchImpl: async (url) => new Response(String(url).includes('videocardbenchmark') ? gpuHtml : cpuHtml, { status: 200 }),
+    // The 5070 Ti id is pinned in the URL, so the page must carry that row.
+    fetchImpl: async (url) => new Response(String(url).includes('videocardbenchmark') ? liveGpuHtml : cpuHtml, { status: 200 }),
   })
 
   assert.equal(result.dataset.schemaVersion, 7)

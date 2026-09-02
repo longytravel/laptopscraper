@@ -95,9 +95,19 @@ test('measures value against the credited price while leaving work performance u
   assert.ok(result.workValue! > workValueRatio(100, 2849)!)
 })
 
-test('rejects a downgrade in either CPU dimension', () => {
-  const result = assessBestBuy(makeListing({ cpuMultiPower: 130, cpuSinglePower: 99 }))
-  assert.deepEqual(result.failures, ['single-thread below G16'])
+test('rejects a multi-core downgrade outright and a single-thread shortfall beyond 5%', () => {
+  assert.deepEqual(assessBestBuy(makeListing({ cpuMultiPower: 99.9, cpuSinglePower: 130 })).failures, ['multi-core below G16'])
+  assert.deepEqual(assessBestBuy(makeListing({ cpuMultiPower: 130, cpuSinglePower: 94.9 })).failures, ['single-thread more than 5% below G16'])
+})
+
+test('treats a single-thread or graphics index within 5% of the G16 as matching it', () => {
+  // The Ryzen 9 7945HX class: far faster multi-core, single-thread 96.
+  const ryzen = assessBestBuy(makeListing({ cpuMultiPower: 123, cpuSinglePower: 96 }))
+  assert.equal(ryzen.eligible, true)
+  assert.equal(ryzen.workPerformance, 114.187)
+  // The RTX 5060, at 96% of the RTX 4060 floor.
+  assert.equal(assessBestBuy(makeListing({ gpuPower: 96 })).eligible, true)
+  assert.deepEqual(assessBestBuy(makeListing({ gpuPower: 94 })).failures, ['graphics more than 5% below RTX 4060'])
 })
 
 test('applies all replacement-quality gates with stable reasons', () => {
@@ -117,7 +127,7 @@ test('applies all replacement-quality gates with stable reasons', () => {
     'CPU benchmark evidence missing',
     'RAM below 64 GB',
     'storage below 1 TB',
-    'graphics below RTX 4060',
+    'graphics more than 5% below RTX 4060',
     'unresolved specification conflict',
     'price above £3,000',
   ])
@@ -134,7 +144,7 @@ test('removes listings dominated on price, work power, RAM and storage', () => {
 test('ranks eligible frontier listings by work value and safety evidence', () => {
   const highValue = makeListing({ id: 'high-value', price: 1500, cpuMultiPower: 130, cpuSinglePower: 130 })
   const highPower = makeListing({ id: 'high-power', price: 1800, cpuMultiPower: 145, cpuSinglePower: 145 })
-  const rejected = makeListing({ id: 'rejected', cpuSinglePower: 95 })
+  const rejected = makeListing({ id: 'rejected', cpuSinglePower: 94 })
 
   assert.deepEqual(rankBestBuys([highPower, rejected, highValue]).map((row) => row.id), ['high-value', 'high-power'])
 })

@@ -8,6 +8,7 @@ import {
   validateAiEvidence,
   type AiListingExtraction,
   type AiResponsesClient,
+  canonicalRiskLabel,
 } from '../src/laptop/ai-enrichment.ts'
 
 function claim<T extends string | number | boolean>(value: T | null, evidence: string | null, confidence: 'high' | 'medium' | 'low' = 'high') {
@@ -148,8 +149,31 @@ test('AI-evidenced risks deterministically reduce the recommendation score', () 
   })
   const merged = mergeAiEnrichment(row, validated)
 
-  assert.ok(merged.riskFlags.includes('battery failure'))
+  // The model's own wording is kept as evidence; the flag itself is the fixed category.
+  assert.ok(merged.riskFlags.includes('battery concern'))
+  assert.ok(!merged.riskFlags.includes('battery failure'))
+  assert.equal(merged.aiEnrichment?.riskEvidence[0]?.label, 'battery failure')
   assert.ok(merged.recommendationScore < row.recommendationScore)
+})
+
+test('folds free-text AI risk labels into the fixed categories and drops the rest', () => {
+  assert.equal(canonicalRiskLabel('No charger included'), 'no charger')
+  assert.equal(canonicalRiskLabel('Power adapter not supplied'), 'no charger')
+  assert.equal(canonicalRiskLabel('off-brand charger'), null)
+  assert.equal(canonicalRiskLabel('Random restarts under load'), 'instability reported')
+  assert.equal(canonicalRiskLabel('BIOS password set'), 'firmware or account lock')
+  assert.equal(canonicalRiskLabel('Noise and heat under load'), 'thermal concern')
+  assert.equal(canonicalRiskLabel('Screen has a scratch'), 'display or hinge damage')
+  assert.equal(canonicalRiskLabel('Battery performance may vary'), 'battery concern')
+  assert.equal(canonicalRiskLabel('Photos are illustrative'), 'stock photos')
+  assert.equal(canonicalRiskLabel('parts_or_not_working'), 'faulty or not working')
+  assert.equal(canonicalRiskLabel('Parts-only / sold for parts'), 'faulty or not working')
+  assert.equal(canonicalRiskLabel('not_a_laptop_listing'), 'not a laptop')
+  assert.equal(canonicalRiskLabel('Obvious signs of use'), 'cosmetic wear')
+  assert.equal(canonicalRiskLabel('Operating system information conflicts'), 'listing details conflict')
+  for (const noise of ['No optical drive', 'Opened box', 'No WWAN option', 'Non-PayPal payment restriction', 'Original box not included', 'Not backlit', 'Operating system not included / FreeDOS']) {
+    assert.equal(canonicalRiskLabel(noise), null, noise)
+  }
 })
 
 test('applies evidence-backed VRAM and RAM upgradeability claims explicitly', () => {

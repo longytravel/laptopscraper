@@ -341,7 +341,10 @@ function App() {
   const [filters, setFilters] = useState<LaptopFilters>(() => createDefaultFilters())
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [mode, setMode] = useState<ResultMode>('new')
+  // Open on every qualifying machine. "New" only holds what appeared in the
+  // last 24 hours, which on most days is nothing, and an empty first screen
+  // reads as a broken board.
+  const [mode, setMode] = useState<ResultMode>('matches')
   const [sortMode, setSortMode] = useState<SortMode>('recommended')
   const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
 

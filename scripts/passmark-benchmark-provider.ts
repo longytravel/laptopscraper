@@ -106,6 +106,10 @@ export function parsePassmarkGpuPage(html: string, target = -1): { graphicsScore
         sampleCount: Number.isFinite(sampleCount) && sampleCount > 0 ? sampleCount : null,
       }
     }
+    // The id pins one GPU. Falling through to "the last rating on the page"
+    // would silently score the listing with whatever card PassMark happened to
+    // print last, so a missing row is a failure, not a guess.
+    throw new Error(`PassMark GPU page has no row for id ${target}`)
   }
 
   const text = visibleText(html)

@@ -2,12 +2,20 @@
 
 Last updated: 1 September 2026 (Europe/London); original handoff 22 July 2026
 
+## Update, 2 September 2026
+
+- Gates now carry a 5% tolerance on single-thread and graphics (index 95 or more passes); multi-core still needs 100. The user accepted this to surface cheaper machines such as the Ryzen 9 7945HX class and RTX 5060 models.
+- Every CPU and GPU figure in the evidence store was cross-checked against PassMark's chart pages and matched exactly. Catalogue gaps were filled: Core Ultra 9 290HX Plus, Ultra 7 270HX Plus, Ultra 7 251HX, Ultra 5 235HX, Core 7 245HX, Ryzen 9 9850HX, Ryzen 9 8945HX, Ryzen AI Max+ Pro 395 and Max+ 392 on the CPU side; RTX 3080 Ti, 3080 and 3070 Ti Laptop, RTX PRO 2000 to 5000 Blackwell Laptop, RTX 3500, 3000 and 2000 Ada Laptop, RTX A5500, A5000 and A4500 Laptop, and the Radeon 8060S on the GPU side, each pinned to its PassMark id. A GPU page with no row for the requested id now fails instead of falling back to whatever rating printed last.
+- AI risk labels are folded into eleven fixed categories; the 880-label chip wall on the dashboard is gone and the committed dataset was migrated. The dashboard opens on all qualifying machines, not the 24-hour "New" tab.
+- Reasoning effort stays at medium. A paired test on 12 real listings showed low effort missing the 64 GB RAM claim in 6 of them.
+- New listings are only parsed at collection, so the new catalogue entries take effect from the next scheduled run.
+
 ## Update, 1 September 2026
 
 - The PassMark CPU scrape trusted whatever page the name search returned. For the Core Ultra 9 285H, Core Ultra 7 255H, i9-13900H, i7-13700H, Ryzen 9 9955HX, Ryzen 9 7945HX and Ryzen 9 8945H that was a different chip's page, so a Lenovo Yoga Pro 9 (Ultra 9 285H, a slower processor than the G16) was recommended and announced on Telegram. The provider now verifies the chip named on each page, resolves mismatches through the id-pinned lookup catalogue, and refuses to store another chip's scores. `verify:laptop-dataset` fails on benchmark collisions; `audit:laptop-benchmarks` prints the full check.
 - AI enrichment no longer spends requests on listings that cannot qualify (deterministic RAM under 64 GB, storage under 1 TB, parts or faulty, over £3,000). AI never overrides deterministic values, so those requests could not change a recommendation. Steady-state OpenAI spend was about £0.05 to £0.12 per run before this; expect roughly a fifth of that.
 - Deployment is by Vercel's Git integration on the bot's commit, not the Vercel CLI; `VERCEL_TOKEN` is unused. GitHub starts the scheduled runs one to seven hours late, so digests arrive around midday and late evening.
-- The scatter chart plots only listings that pass every gate. With the strict no-downgrade rule on both CPU dimensions, no listing has beaten the G16's £1,170 work value since July; the chart is honest, not broken.
+- The scatter chart plots only listings that pass every gate. Under the original strict no-downgrade rule on both CPU dimensions, no listing had beaten the G16's £1,170 work value since July; the chart was honest, not broken.
 
 This is the restart document for the laptop-finding system. A new developer or a fresh Codex context should read this file first, then inspect the files named in **Resume order**. Do not reconstruct the project from chat history.
 
@@ -22,8 +30,8 @@ Only recommend complete, working laptops that are at least as capable as the G16
 - at least 64 GB RAM;
 - at least 1 TB storage;
 - CPU multi-core performance at least equal to the G16;
-- CPU single-thread performance at least equal to the G16;
-- GPU at least the audited RTX 4060 Laptop floor;
+- CPU single-thread performance within 5% of the G16 (index 95 or more);
+- GPU within 5% of the audited RTX 4060 Laptop floor (index 95 or more);
 - advertised item price no more than £3,000;
 - exact CPU identity and sufficiently trustworthy specification evidence;
 - no unresolved evidence conflict.

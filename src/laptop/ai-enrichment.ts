@@ -175,6 +175,51 @@ export function validateAiEvidence(listing: LaptopListing, extraction: AiListing
   return { accepted, rejected }
 }
 
+/**
+ * The model writes its own wording for every risk it spots, and 1,800 listings
+ * produced 880 different labels: "No optical drive", "Opened box", "Operating
+ * system ambiguity". Shown as filter chips that is a wall, and none of it lines
+ * up with the deterministic labels the default filters exclude. Every AI label
+ * is therefore folded into one of these fixed categories, or dropped from the
+ * flags (the original wording stays in aiEnrichment.riskEvidence). Order
+ * matters: "screen scratch" is display damage before it is cosmetic wear.
+ */
+export const CANONICAL_RISKS = [
+  'no charger',
+  'instability reported',
+  'firmware or account lock',
+  'thermal concern',
+  'display or hinge damage',
+  'battery concern',
+  'stock photos',
+  'faulty or not working',
+  'not a laptop',
+  'cosmetic wear',
+  'listing details conflict',
+] as const
+
+export type CanonicalRisk = (typeof CANONICAL_RISKS)[number]
+
+const RISK_RULES: Array<[RegExp, CanonicalRisk]> = [
+  [/\b(?:no|missing|without|lacks?|absent|not\s+included|not\s+supplied)\b[^.;]*\b(?:charger|power\s*(?:adapter|supply|brick|lead|cable)|psu|ac\s*adapter)\b|\b(?:charger|power\s*(?:adapter|supply|brick))\b[^.;]*\b(?:not\s+included|missing|absent|not\s+supplied)\b/i, 'no charger'],
+  [/\b(?:crash|bsod|blue\s*screen|unstable|instabil|random(?:ly)?\s+(?:restart|shut|reboot)|freez|intermittent|glitch)/i, 'instability reported'],
+  [/\b(?:bios|firmware|mdm|activation|icloud|account|admin|supervisor)\b[^.;]*\b(?:lock|password|pin|enrol)|\b(?:lock(?:ed)?|password)\b[^.;]*\b(?:bios|firmware|mdm|account)\b|\bbitlocker\b/i, 'firmware or account lock'],
+  [/\b(?:overheat|thermal|runs?\s+hot|too\s+hot|throttl|heat\s+(?:issue|problem|under\s+load)|noise\s+and\s+heat|fan\s+(?:noise|loud|noisy)|noisy\s+fan)/i, 'thermal concern'],
+  [/\b(?:screen|display|lcd|panel|hinge|lid)\b[^.;]*\b(?:damage|crack|dead\s*pixel|lines?|flicker|bleed|burn|scratch|fault|issue|broken|loose|marks?|spots?|blemish|pressure)|\b(?:dead\s*pixel|cracked\s+screen|screen\s+burn|backlight\s+bleed|hinge)/i, 'display or hinge damage'],
+  [/\bbattery\b/i, 'battery concern'],
+  [/\b(?:stock|library|generic|illustrative|representative|catalog(?:ue)?|sample)\s+(?:photo|image|picture)s?|\b(?:photo|image|picture)s?\s+(?:are|may\s+be|is|for)\s+(?:for\s+)?illustrat|\bnot\s+actual\s+(?:photo|item|unit|product)/i, 'stock photos'],
+  [/\b(?:fault|not\s+working|non[-\s_]?working|not_working|parts?[-\s_]*(?:only|or|and|\/)|spares?|repairs?|untested|not\s+tested|does\s+not\s+(?:boot|power|turn|work)|no\s+power|won'?t\s+(?:boot|power|turn)|boots?\s+(?:only\s+)?to\s+bios|\bdead\b|broken|defect|damaged\s+(?:motherboard|board|logic))/i, 'faulty or not working'],
+  [/\bnot[_\s]+a[_\s]+(?:complete\s+)?laptop|\bdesktop\b|\btablet\s+only|\b(?:motherboard|mainboard|component|accessory|box|charger|screen)\s+only\b|\bnot[_\s]+(?:a\s+)?(?:complete|whole)\b/i, 'not a laptop'],
+  [/\b(?:cosmetic|scratch|scuff|dent|wear|worn|marks?|signs?\s+of\s+use|chip(?:ped)?\s+(?:corner|edge|paint)|blemish|sticker\s+residue)/i, 'cosmetic wear'],
+  [/\b(?:conflict|inconsisten|differs?|discrepan|ambigu|mismatch|contradict)/i, 'listing details conflict'],
+]
+
+/** The fixed category an AI risk label belongs to, or null when it is not a risk this system tracks. */
+export function canonicalRiskLabel(label: string): CanonicalRisk | null {
+  const text = label.replace(/[_-]+/g, ' ')
+  return RISK_RULES.find(([pattern]) => pattern.test(text))?.[1] ?? null
+}
+
 function rawFromListing(listing: LaptopListing, aspects: RawLaptopListing['localizedAspects']): RawLaptopListing {
   return {
     sourceListingId: listing.id,
@@ -256,7 +301,10 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
     if (field === 'storageGb') provenance.storage = 'ai'
   }
 
-  const mergedRiskFlags = [...new Set([...recomputed.riskFlags, ...validated.accepted.riskFlags.map((risk) => risk.label)])]
+  const mergedRiskFlags = [...new Set([
+    ...recomputed.riskFlags,
+    ...validated.accepted.riskFlags.map((risk) => canonicalRiskLabel(risk.label)).filter((label): label is CanonicalRisk => label != null),
+  ])]
   return {
     ...listing,
     ...recomputed,

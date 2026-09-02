@@ -209,7 +209,7 @@ test('default filters open at the G16 replacement floor with the £3,000 ceiling
   assert.equal(filters.cpuWeight, 0.6)
   assert.equal(filters.minRamGb, 64)
   assert.equal(filters.minStorageGb, 1000)
-  assert.deepEqual(filters.excludedRisks, new Set(['instability reported', 'firmware or account lock', 'no charger']))
+  assert.deepEqual(filters.excludedRisks, new Set(['instability reported', 'firmware or account lock', 'no charger', 'not a laptop']))
 })
 
 test('coordinates power, hardware, seller, condition, returns and risk filters', () => {

@@ -12,7 +12,7 @@ The reference machine is:
 
 ## What qualifies
 
-A recommendation must be a complete working laptop, cost no more than £3,000 advertised, have at least 64 GB RAM and 1 TB storage, pass the RTX 4060 graphics floor, and have neither lower multi-core nor lower single-thread CPU performance than the G16. An unresolved specification conflict keeps a listing out of recommendations.
+A recommendation must be a complete working laptop, cost no more than £3,000 advertised, have at least 64 GB RAM and 1 TB storage, and have multi-core CPU performance at least equal to the G16. Single-thread performance and graphics are safety floors with a 5% tolerance: an index of 95 or more against the G16's i9-14900HX and RTX 4060 counts as matching them, because PassMark's own spread between samples of one part is wider than that. This admits the Ryzen 9 7945HX class (single-thread 96, multi-core 123) and the RTX 5060 (96) without relaxing the multi-core rule. An unresolved specification conflict keeps a listing out of recommendations.
 
 Postage is deliberately excluded from filtering, ranking and recommendation wording. Ranking uses the advertised item price, less a credit for RAM and storage carried above the replacement floor.
 
@@ -36,7 +36,11 @@ Multi-core receives 70% because local optimizer work can run across parallel CPU
 
 RAM and storage above the floor never touch `workPerformance`, because more of either does not make a single backtest run faster. They earn credit through `effectivePrice` instead: surplus hardware saves you buying the part separately, so it comes off the price that value is measured against, at street cost (DDR5 SO-DIMM ~£2.50/GB, NVMe ~£0.06/GB). `workPerformance` therefore stays an honest speed measure and is never inflated by capacity. The advertised price is still what the dashboard plots and what you pay; only the value ratio uses the credited figure.
 
-CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old.
+CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old. On 2 September 2026 every stored CPU figure was cross-checked against PassMark's laptop and single-thread charts and every GPU figure against its GPU charts; all matched to the digit.
+
+### Risk flags
+
+The deterministic parser raises a fixed set of risk labels. The AI extraction also reports risks, but in its own words, and 1,800 listings produced 880 distinct labels. Every AI label is folded into one of eleven fixed categories (no charger, instability reported, firmware or account lock, thermal concern, display or hinge damage, battery concern, stock photos, faulty or not working, not a laptop, cosmetic wear, listing details conflict) or dropped from the flags; the original wording is kept in `aiEnrichment.riskEvidence`. The dashboard's "Hide listings with" chips therefore stay short, and the default exclusions apply to AI-found risks too.
 
 ### Benchmark evidence integrity
 

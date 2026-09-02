@@ -306,7 +306,7 @@ export function createDefaultFilters(): LaptopFilters {
     allowedGpuFamilies: new Set(),
     allowedBuyingOptions: new Set(),
     allowedConfidence: new Set(),
-    excludedRisks: new Set(['instability reported', 'firmware or account lock', 'no charger']),
+    excludedRisks: new Set(['instability reported', 'firmware or account lock', 'no charger', 'not a laptop']),
   }
 }
 
