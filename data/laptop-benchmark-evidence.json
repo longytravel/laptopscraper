@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-09-02T12:13:41.100Z",
+  "refreshedAt": "2026-09-02T21:58:19.923Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -737,6 +737,18 @@
       "observedAt": "2026-09-02",
       "retrievedAt": "2026-09-02T12:13:41.100Z",
       "sampleCount": 3526,
+      "status": "validated",
+      "providerVersion": "passmark-html-v2"
+    },
+    "gpu:NVIDIA RTX A5500 Laptop GPU": {
+      "kind": "gpu",
+      "canonical": "NVIDIA RTX A5500 Laptop GPU",
+      "graphicsScore": 17353,
+      "sourceName": "PassMark",
+      "sourceUrl": "https://www.videocardbenchmark.net/video_lookup.php?gpu=RTX%20A5500%20Laptop%20GPU&id=4562",
+      "observedAt": "2026-09-02",
+      "retrievedAt": "2026-09-02T21:58:19.923Z",
+      "sampleCount": 294,
       "status": "validated",
       "providerVersion": "passmark-html-v2"
     }
