@@ -2,7 +2,7 @@ import { zodTextFormat } from 'openai/helpers/zod'
 import { z } from 'zod'
 
 import { CPU_BENCHMARKS, GPU_BENCHMARKS, matchBenchmark } from './benchmarks'
-import { computeRecommendationScore, enrichListing } from './engine'
+import { computeRecommendationScore, enrichListing, normalizeResolution } from './engine'
 import type { LaptopListing, RawLaptopListing, SpecConfidence } from './types'
 
 // luna beats every mini on price since the 2026-07-30 cut ($0.20/$1.20 vs $0.75/$4.50 per M) — recheck before swapping "down"
@@ -257,9 +257,21 @@ export function mergeAiEnrichment(listing: LaptopListing, validated: ValidatedAi
     storageGb: 'storage',
   }
 
+  // The parser stores canonical forms ("NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+  // "QHD") while the model quotes the listing's own words ("RTX 5070 Ti",
+  // "2560 x 1600"). Comparing the raw strings called the same part a conflict,
+  // so each field is normalised the way the parser would have normalised it.
+  function agrees(field: AiFieldName, existing: unknown, candidate: unknown): boolean {
+    const text = String(candidate)
+    if (field === 'cpuModel') return matchBenchmark(text, CPU_BENCHMARKS)?.canonical === existing
+    if (field === 'gpuModel') return matchBenchmark(text, GPU_BENCHMARKS)?.canonical === existing
+    if (field === 'resolution') return normalizeResolution(text) === existing || text.toLocaleLowerCase() === String(existing).toLocaleLowerCase()
+    return String(existing).toLocaleLowerCase() === text.toLocaleLowerCase()
+  }
+
   function choose<T>(field: AiFieldName, existing: T | null, candidate: T | null): T | null {
     if (existing != null) {
-      if (candidate != null && String(existing).toLocaleLowerCase() !== String(candidate).toLocaleLowerCase()) {
+      if (candidate != null && !agrees(field, existing, candidate)) {
         warnings.push(`AI conflict for ${field}; kept deterministic value`)
       } else if (candidate != null && (listing.provenance[field] === 'ai' || listing.provenance[provenanceAlias[field] ?? ''] === 'ai')) {
         used.add(field)

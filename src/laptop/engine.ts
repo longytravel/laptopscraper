@@ -79,7 +79,8 @@ function screenSize(text: string): number | null {
   return match ? Number(match[1]) : null
 }
 
-function resolution(text: string): string | null {
+/** Maps any resolution wording ("2560 x 1600", "WQXGA", "QHD+") to the class label the parser stores. */
+export function normalizeResolution(text: string): string | null {
   if (/\b(?:3840\s*x\s*2160|4k|uhd)\b/i.test(text)) return '4K/UHD'
   if (/\b(?:2560\s*x\s*(?:1440|1600)|qhd\+?|wqxga)\b/i.test(text)) return 'QHD'
   if (/\b(?:1920\s*x\s*(?:1080|1200)|fhd\+?)\b/i.test(text)) return 'FHD'
@@ -157,7 +158,7 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
     storageGb,
     screenInches,
     weightKg,
-    resolution: resolution(resolutionValue || fullText),
+    resolution: normalizeResolution(resolutionValue || fullText),
     vramGb: gpu?.vramGb ?? null,
     hardExcluded: Boolean(matchedExclusion),
     hardExclusionReason: matchedExclusion?.[1] ?? null,

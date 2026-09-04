@@ -203,3 +203,29 @@ test('applies evidence-backed VRAM and RAM upgradeability claims explicitly', ()
   assert.equal(replayed.provenance.ramUpgradeable, 'ai')
   assert.equal(replayed.aiEnrichment?.acceptedClaims.find((item) => item.field === 'vramGb')?.applied, true)
 })
+
+test('does not call the same part written two ways a conflict, but still flags a real disagreement', () => {
+  const row = enrichListing({
+    sourceListingId: 'v1|utopia|0',
+    title: 'Utopia Mech-16 Ryzen 9 9955HX3D RTX 5070 Ti 64GB 1TB QHD 300Hz Custom Laptop',
+    description: '2560 x 1600 16" QHD+ display, 300Hz. 2TB SSD fitted.',
+    localizedAspects: [{ name: 'SSD Capacity', value: '1 TB' }, { name: 'Maximum Resolution', value: '2560 x 1600' }],
+    price: 1849,
+    shippingPrice: 0,
+  })
+  assert.equal(row.gpuModel, 'NVIDIA GeForce RTX 5070 Ti Laptop GPU')
+  assert.equal(row.resolution, 'QHD')
+
+  const validated = validateAiEvidence(row, extraction({
+    cpuModel: { value: 'AMD Ryzen 9 9955HX3D', evidence: 'Ryzen 9 9955HX3D', confidence: 'high' },
+    gpuModel: { value: 'RTX 5070 Ti', evidence: 'RTX 5070 Ti', confidence: 'high' },
+    resolution: { value: '2560 x 1600', evidence: '2560 x 1600', confidence: 'high' },
+    storageGb: { value: 2048, evidence: '2TB SSD', confidence: 'medium' },
+  }))
+  const merged = mergeAiEnrichment(row, validated)
+
+  const conflicts = merged.warnings.filter((warning) => warning.startsWith('AI conflict'))
+  assert.deepEqual(conflicts, ['AI conflict for storageGb; kept deterministic value'])
+  assert.equal(merged.gpuModel, 'NVIDIA GeForce RTX 5070 Ti Laptop GPU')
+  assert.equal(merged.storageGb, 1024)
+})
