@@ -196,6 +196,7 @@ export const CANONICAL_RISKS = [
   'not a laptop',
   'cosmetic wear',
   'listing details conflict',
+  'no manufacturer warranty',
 ] as const
 
 export type CanonicalRisk = (typeof CANONICAL_RISKS)[number]
@@ -212,6 +213,7 @@ const RISK_RULES: Array<[RegExp, CanonicalRisk]> = [
   [/\bnot[_\s]+a[_\s]+(?:complete\s+)?laptop|\bdesktop\b|\btablet\s+only|\b(?:motherboard|mainboard|component|accessory|box|charger|screen)\s+only\b|\bnot[_\s]+(?:a\s+)?(?:complete|whole)\b/i, 'not a laptop'],
   [/\b(?:cosmetic|scratch|scuff|dent|wear|worn|marks?|signs?\s+of\s+use|chip(?:ped)?\s+(?:corner|edge|paint)|blemish|sticker\s+residue)/i, 'cosmetic wear'],
   [/\b(?:conflict|inconsisten|differs?|discrepan|ambigu|mismatch|contradict)/i, 'listing details conflict'],
+  [/\bwarrant/i, 'no manufacturer warranty'],
 ]
 
 /** The fixed category an AI risk label belongs to, or null when it is not a risk this system tracks. */
@@ -239,7 +241,12 @@ function rawFromListing(listing: LaptopListing, aspects: RawLaptopListing['local
     imageUrl: listing.imageUrl ?? undefined,
     localizedAspects: [...(listing.sourceEvidence?.localizedAspects ?? []), ...(aspects ?? [])],
     buyingOptions: listing.buyingOptions,
-    returnTerms: { returnsAccepted: listing.returnsAccepted ?? undefined },
+    returnTerms: {
+      returnsAccepted: listing.returnsAccepted ?? undefined,
+      returnPeriodDays: listing.returnPeriodDays ?? null,
+      returnShippingPaidBy: listing.returnShippingPaidBy ?? null,
+    },
+    sellerAccountType: listing.sellerAccountType ?? null,
     listedAt: listing.listedAt,
     scrapedAt: listing.scrapedAt ?? undefined,
     searchTerms: listing.searchTerms,

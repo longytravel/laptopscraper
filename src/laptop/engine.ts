@@ -38,7 +38,35 @@ const RISKS: Array<[RegExp, string]> = [
   [/\b(?:screen\s+damage|dead\s+pixel|screen\s+line|damaged\s+hinge|hinge\s+damage)\b/i, 'display or hinge damage'],
   [/\b(?:battery\s+(?:fault|issue|dead)|poor\s+battery|battery\s+not\s+holding)\b/i, 'battery concern'],
   [/\b(?:stock\s+photo|library\s+photo)\b/i, 'stock photos'],
+  [/\bno\s+(?:dell|lenovo|asus|hp|msi|acer|razer|apple|samsung|manufacturer|manufacturer'?s|maker'?s|oem)\s+warranty\b|\b(?:manufacturer'?s?|dell|lenovo|asus|hp)\s+warranty\s+(?:has\s+)?(?:expired|ended|void|voided|lapsed)\b|\bout\s+of\s+(?:manufacturer'?s?\s+)?warranty\b|\bno\s+warranty\b/i, 'no manufacturer warranty'],
 ]
+
+/**
+ * Sellers say "no faults", "not for parts" and "fully tested, not untested"
+ * far more often than the opposite once the full description is read, so a
+ * hard-exclusion word inside the description only counts when nothing negates
+ * it in the few words before. Titles are taken at face value.
+ */
+const NEGATION_BEFORE = /\b(?:no|not|never|isn'?t|aren'?t|without|non|zero|free\s+(?:of|from))\W+(?:\w+\W+){0,3}$/i
+
+function hardExclusionIn(text: string, guarded: boolean): [RegExp, string] | undefined {
+  for (const entry of HARD_EXCLUSIONS) {
+    const pattern = new RegExp(entry[0].source, entry[0].flags.includes('g') ? entry[0].flags : `${entry[0].flags}g`)
+    for (const match of text.matchAll(pattern)) {
+      if (!guarded || !NEGATION_BEFORE.test(text.slice(Math.max(0, match.index - 40), match.index))) return entry
+    }
+  }
+  return undefined
+}
+
+/**
+ * "Upgradeable to 128GB", "supports up to 4TB" describe the chassis, not the
+ * unit for sale. Left in, they read as a second capacity claim and mark a
+ * correctly listed machine as conflicting.
+ */
+function withoutCapacityCeilings(text: string): string {
+  return text.replace(/\b(?:up\s+to|upgrad(?:e|ed|eable|able)\s+to|max(?:imum)?(?:\s+of)?|supports?(?:\s+up\s+to)?|expandable\s+to|can\s+(?:be\s+)?(?:take|hold|upgraded?\s+to|fit)|room\s+for|capacity\s+(?:of|for))\s+(?:\d+(?:\.\d+)?\s*(?:GB|TB)\b[^.;\n]{0,40})/gi, ' ')
+}
 
 function aspectMap(aspects: EbayAspect[] = []): Map<string, string> {
   return new Map(aspects.map((aspect) => [String(aspect.name ?? '').trim().toLowerCase(), String(aspect.value ?? '').trim()]))
@@ -112,10 +140,11 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
 
   const ramAspect = aspectCapacity(findAspect(aspects, ['ram size', 'installed ram', 'memory']))
   const storageAspect = aspectCapacity(findAspect(aspects, ['ssd capacity', 'storage capacity', 'hard drive capacity']))
+  const descriptionForCapacity = withoutCapacityCeilings(description)
   const titleRam = numericCapacity(title, 'ram')
-  const descriptionRam = numericCapacity(description, 'ram')
+  const descriptionRam = numericCapacity(descriptionForCapacity, 'ram')
   const titleStorage = numericCapacity(title, 'storage')
-  const descriptionStorage = numericCapacity(description, 'storage')
+  const descriptionStorage = numericCapacity(descriptionForCapacity, 'storage')
   const textRam = titleRam ?? descriptionRam
   const textStorage = titleStorage ?? descriptionStorage
   if (ramAspect && textRam && ramAspect !== textRam) warnings.push('conflicting RAM specifications')
@@ -128,7 +157,8 @@ export function parseLaptopListing(raw: Pick<RawLaptopListing, 'title' | 'descri
   const screenInches = screenAspect ?? screenSize(fullText)
   const resolutionValue = findAspect(aspects, ['maximum resolution', 'resolution'])
   const matchedExclusion = TITLE_ONLY_EXCLUSIONS.find(([pattern]) => pattern.test(title))
-    ?? HARD_EXCLUSIONS.find(([pattern]) => pattern.test(fullText))
+    ?? hardExclusionIn(title, false)
+    ?? hardExclusionIn(description, true)
   const riskFlags = RISKS.filter(([pattern]) => pattern.test(fullText)).map(([, label]) => label)
   const brand = BRANDS.find((candidate) => new RegExp(`\\b${candidate}\\b`, 'i').test(`${findAspect(aspects, ['brand'])} ${fullText}`)) ?? null
   const hasStructuredPair = Boolean(cpuAspect && gpuAspect && cpu && gpu)
@@ -249,6 +279,9 @@ export function enrichListing(raw: RawLaptopListing, cpuWeight = 0.6): LaptopLis
     location: raw.location ?? '',
     buyingOptions: raw.buyingOptions ?? [],
     returnsAccepted,
+    returnPeriodDays: raw.returnTerms?.returnPeriodDays ?? null,
+    returnShippingPaidBy: raw.returnTerms?.returnShippingPaidBy ?? null,
+    sellerAccountType: raw.sellerAccountType ?? null,
     listedAt: raw.listedAt ?? null,
     scrapedAt: raw.scrapedAt ?? null,
     searchTerms: raw.searchTerms ?? [],

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { assessBestBuy, rankBestBuys } from "./best-buy";
+import { sellerTerms } from "./dashboard";
 import type { LaptopDataset, LaptopListing } from "./types";
 
 export interface AlertState {
@@ -65,6 +66,8 @@ function listingBlock(listing: LaptopListing, isNew: boolean, position: number):
     `${listing.screenInches ? `${listing.screenInches}" screen` : 'screen size unlisted'}${listing.resolution ? ` (${listing.resolution})` : ''} · ${listing.weightKg != null ? `${listing.weightKg} kg` : 'weight unlisted'}`,
     `Work value ${signedRatioPercent(result.workValue!)} vs your G16${result.surplusCredit > 0 ? ` (£${result.effectivePrice.toFixed(0)} after £${result.surplusCredit.toFixed(0)} surplus RAM and storage credit)` : ''}`,
     `${condition} · ${confidence} evidence confidence · ${escapeTelegramHtml(seller)} · #${position} current best buy`,
+    ...(sellerTerms(listing).length ? [escapeTelegramHtml(sellerTerms(listing).join(" · "))] : []),
+    ...(listing.riskFlags.length ? [`⚠️ ${escapeTelegramHtml(listing.riskFlags.join(" · "))}`] : []),
     `<a href="${url}">View on eBay</a>`,
   ].join("\n");
 }

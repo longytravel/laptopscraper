@@ -102,9 +102,24 @@ export function buildRecommendationReason(listing: LaptopListing): string {
   if (assessment.surplusCredit > 0) {
     parts.push(`£${Math.round(assessment.surplusCredit)} credited for surplus RAM and storage`)
   }
-  if (listing.returnsAccepted === true) parts.push('returns accepted')
-  else if (listing.returnsAccepted === false) parts.push('no returns')
+  parts.push(...sellerTerms(listing))
   return `${parts.join(', ')}.`
+}
+
+/** Return and seller-type facts in the words a buyer needs: how long, who pays, and whether consumer law applies. */
+export function sellerTerms(listing: Pick<LaptopListing, 'returnsAccepted' | 'returnPeriodDays' | 'returnShippingPaidBy' | 'sellerAccountType'>): string[] {
+  const parts: string[] = []
+  if (listing.returnsAccepted === true) {
+    const details = [
+      listing.returnPeriodDays ? `${listing.returnPeriodDays} days` : null,
+      listing.returnShippingPaidBy === 'SELLER' ? 'seller pays return postage' : listing.returnShippingPaidBy === 'BUYER' ? 'buyer pays return postage' : null,
+    ].filter(Boolean)
+    parts.push(details.length ? `returns accepted (${details.join(', ')})` : 'returns accepted')
+  } else if (listing.returnsAccepted === false) {
+    parts.push('no returns')
+  }
+  if (listing.sellerAccountType === 'BUSINESS') parts.push('business seller, so UK consumer rights apply')
+  return parts
 }
 
 function selected(set: Set<string>, value: string | null): boolean {

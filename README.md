@@ -38,6 +38,10 @@ RAM and storage above the floor never touch `workPerformance`, because more of e
 
 CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old. On 2 September 2026 every stored CPU figure was cross-checked against PassMark's laptop and single-thread charts and every GPU figure against its GPU charts; all matched to the digit.
 
+### Listing text
+
+The Browse API search response carries only eBay's auto-generated two-sentence `shortDescription`. The per-item detail call, which the collector already makes, returns the seller's full description as HTML. Both are kept: the snippet, then the full text reduced to plain lines and capped at 6,000 characters. Warranty terms, seal status, keyboard layout, cosmetic notes and faults live in that full text, and until 5 September 2026 none of it was read. Two guards keep the longer text from misfiring: a hard-exclusion word inside the description is ignored when negated within the few words before it ("no faults", "not for parts"), and capacity ceilings ("upgradeable to 128GB", "supports up to 4TB") are stripped before RAM and storage are parsed. Business-seller status and the return window are also stored and shown, because a UK business seller owes Consumer Rights Act protection on top of eBay's guarantee.
+
 ### Risk flags
 
 The deterministic parser raises a fixed set of risk labels. The AI extraction also reports risks, but in its own words, and 1,800 listings produced 880 distinct labels. Every AI label is folded into one of eleven fixed categories (no charger, instability reported, firmware or account lock, thermal concern, display or hinge damage, battery concern, stock photos, faulty or not working, not a laptop, cosmetic wear, listing details conflict) or dropped from the flags; the original wording is kept in `aiEnrichment.riskEvidence`. The dashboard's "Hide listings with" chips therefore stay short, and the default exclusions apply to AI-found risks too.

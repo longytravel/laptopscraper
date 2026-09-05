@@ -9,6 +9,7 @@ import {
   fetchJsonWithRetry,
   isUsableCachedDataset,
   isTransientEbayFailure,
+  listingDescription,
   normalizeEbayItem,
 } from '../scripts/ebay-laptop-api.ts'
 
@@ -206,4 +207,36 @@ test('records a failed search while retaining successful results', async () => {
   assert.equal(result.runs.length, 2)
   assert.equal(result.runs.find((run) => run.searchTerm === 'broken')?.returned, 0)
   assert.match(result.runs.find((run) => run.searchTerm === 'broken')?.error ?? '', /500/)
+})
+
+test('reads the seller-written description, not just the two-sentence snippet', () => {
+  const html = '<div><p>Hello! For Sale is an Alienware 16X.</p><ul><li>64GB DDR5 RAM</li><li>2TB NVMe SSD</li></ul>'
+    + '<p>The laptop is Brand New, Sealed.</p><p>There is <b>no Dell warranty</b> on the laptop. 6 months seller warranty is provided.</p>'
+    + '<p>RGB Backlit Keyboard, UK Layout &amp; Windows 11 Licence</p><style>.x{}</style></div>'
+  const text = listingDescription({ shortDescription: 'The machine also sports RGB lights. 64GB DDR5 RAM.', description: html })
+
+  assert.match(text, /^The machine also sports RGB lights\. 64GB DDR5 RAM\.\n/)
+  assert.match(text, /no Dell warranty on the laptop\. 6 months seller warranty/)
+  assert.match(text, /UK Layout & Windows 11 Licence/)
+  assert.doesNotMatch(text, /<|\.x\{/)
+  // The snippet alone is all the search response carries, and it is kept.
+  assert.equal(listingDescription({ shortDescription: 'Just the snippet.' }), 'Just the snippet.')
+  // A boilerplate-heavy seller cannot flood the model.
+  assert.ok(listingDescription({ description: 'x'.repeat(9000) }).length <= 6001)
+})
+
+test('normalises return window, who pays return postage, and business-seller status', () => {
+  const raw = normalizeEbayItem({
+    itemId: 'v1|1|0',
+    title: 'Laptop',
+    description: '<p>Full text</p>',
+    shortDescription: 'Snippet',
+    price: { value: '1599', currency: 'GBP' },
+    seller: { username: 's', feedbackScore: 6420, feedbackPercentage: '100.0', sellerAccountType: 'BUSINESS' },
+    returnTerms: { returnsAccepted: true, returnPeriod: { value: 30, unit: 'CALENDAR_DAY' }, returnShippingCostPayer: 'SELLER' },
+  })
+
+  assert.equal(raw.description, 'Snippet\nFull text')
+  assert.equal(raw.sellerAccountType, 'BUSINESS')
+  assert.deepEqual(raw.returnTerms, { returnsAccepted: true, returnPeriodDays: 30, returnShippingPaidBy: 'SELLER' })
 })

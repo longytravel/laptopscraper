@@ -244,3 +244,45 @@ test('can include needs-checking listings without pretending they meet power', (
 
   assert.deepEqual(applyFilters([unknown], filters).map((row) => row.id), ['unknown'])
 })
+
+test('a negated fault word in the full description does not hard-exclude, but a title fault still does', () => {
+  const clean = parseLaptopListing({
+    title: 'Alienware 16X Aurora Ultra 9 275HX RTX 5070 64GB 2TB',
+    description: 'Fully tested, no faults at all. This is not a spares or repairs listing and it is not untested. Sealed.',
+  })
+  assert.equal(clean.hardExcluded, false)
+  const faulty = parseLaptopListing({
+    title: 'Alienware 16X Aurora Ultra 9 275HX RTX 5070 64GB 2TB',
+    description: 'Sold as faulty, will not power on.',
+  })
+  assert.equal(faulty.hardExcluded, true)
+  assert.equal(parseLaptopListing({ title: 'Alienware 16X faulty', description: 'Otherwise lovely.' }).hardExcluded, true)
+})
+
+test('capacity ceilings in the description are not read as a second RAM or storage claim', () => {
+  const parsed = parseLaptopListing({
+    title: 'Lenovo Legion Pro 7 Ultra 9 275HX RTX 5070 Ti',
+    description: '64GB DDR5 RAM fitted, upgradeable to 128GB. 1TB SSD installed; supports up to 4TB across two M.2 slots.',
+    localizedAspects: [{ name: 'RAM Size', value: '64 GB' }, { name: 'SSD Capacity', value: '1 TB' }],
+  })
+  assert.equal(parsed.ramGb, 64)
+  assert.equal(parsed.storageGb, 1024)
+  assert.deepEqual(parsed.warnings, [])
+})
+
+test('flags a missing manufacturer warranty and carries seller terms through', () => {
+  const row = enrichListing({
+    sourceListingId: 'v1|2|0',
+    title: 'Alienware 16X Aurora Ultra 9 275HX RTX 5070 64GB 2TB',
+    description: 'Brand New, Sealed. There is no Dell warranty on the laptop. 6 months seller warranty is provided.',
+    price: 1599,
+    shippingPrice: 0,
+    sellerAccountType: 'BUSINESS',
+    returnTerms: { returnsAccepted: true, returnPeriodDays: 30, returnShippingPaidBy: 'SELLER' },
+  })
+  assert.deepEqual(row.riskFlags, ['no manufacturer warranty'])
+  assert.equal(row.hardExcluded, false)
+  assert.equal(row.sellerAccountType, 'BUSINESS')
+  assert.equal(row.returnPeriodDays, 30)
+  assert.equal(row.returnShippingPaidBy, 'SELLER')
+})

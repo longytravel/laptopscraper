@@ -24,7 +24,9 @@ export interface RawLaptopListing {
   imageUrl?: string
   localizedAspects?: EbayAspect[]
   buyingOptions?: string[]
-  returnTerms?: { returnsAccepted?: boolean } | null
+  returnTerms?: { returnsAccepted?: boolean; returnPeriodDays?: number | null; returnShippingPaidBy?: string | null } | null
+  /** eBay's BUSINESS or INDIVIDUAL. A business seller owes UK consumer-rights protection on top of eBay's guarantee. */
+  sellerAccountType?: string | null
   listedAt?: string | null
   scrapedAt?: string
   searchTerms?: string[]
@@ -72,6 +74,9 @@ export interface LaptopListing extends ParsedLaptop {
   location: string
   buyingOptions: string[]
   returnsAccepted: boolean | null
+  returnPeriodDays?: number | null
+  returnShippingPaidBy?: string | null
+  sellerAccountType?: string | null
   listedAt: string | null
   scrapedAt: string | null
   searchTerms: string[]

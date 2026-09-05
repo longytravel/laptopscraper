@@ -9,6 +9,8 @@ export interface EbaySearchItem extends Record<string, unknown> {
   itemWebUrl?: string
   title?: string
   shortDescription?: string
+  /** Full seller-written description, HTML, present on the item detail response only. */
+  description?: string
   conditionDescription?: string
   condition?: string
   price?: { value?: string; currency?: string }
@@ -18,13 +20,13 @@ export interface EbaySearchItem extends Record<string, unknown> {
     shippingCarrierCode?: string
     shippingCost?: { value?: string; currency?: string }
   }>
-  seller?: { username?: string; feedbackScore?: number; feedbackPercentage?: string }
+  seller?: { username?: string; feedbackScore?: number; feedbackPercentage?: string; sellerAccountType?: string }
   itemLocation?: { city?: string; country?: string }
   image?: { imageUrl?: string }
   additionalImages?: Array<{ imageUrl?: string }>
   localizedAspects?: Array<{ name?: string; value?: string }>
   buyingOptions?: string[]
-  returnTerms?: { returnsAccepted?: boolean }
+  returnTerms?: { returnsAccepted?: boolean; returnPeriod?: { value?: number; unit?: string }; returnShippingCostPayer?: string }
   itemCreationDate?: string
   categories?: Array<{ categoryId?: string; categoryName?: string }>
   searchTerm?: string
@@ -180,6 +182,43 @@ export function deduplicateItems(items: EbaySearchItem[]): Array<EbaySearchItem 
   return [...byId.values()]
 }
 
+const DESCRIPTION_LIMIT = 6000
+
+/** Seller-written HTML reduced to readable text, with block boundaries kept as line breaks. */
+export function descriptionText(html: string): string {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?>|<\/(?:p|li|div|tr|h\d)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, '\n')
+    .trim()
+}
+
+/**
+ * The text the parser and the model read. eBay's shortDescription is an
+ * auto-generated two-sentence snippet; the seller's own description, returned
+ * on the detail response, is where warranty terms, seal status, keyboard
+ * layout, faults and cosmetic notes actually live. Both are kept, the snippet
+ * first, and the whole is capped so a boilerplate-heavy seller cannot flood the
+ * model's context.
+ */
+export function listingDescription(item: Pick<EbaySearchItem, 'description' | 'shortDescription'>): string {
+  const full = item.description ? descriptionText(item.description) : ''
+  const snippet = (item.shortDescription ?? '').trim()
+  const combined = !full ? snippet
+    : snippet && !full.toLowerCase().includes(snippet.toLowerCase()) ? `${snippet}\n${full}`
+      : full
+  return combined.length > DESCRIPTION_LIMIT ? `${combined.slice(0, DESCRIPTION_LIMIT)}…` : combined
+}
+
 export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
   const shipping = (item.shippingOptions ?? [])
     .filter((option) => !/\b(?:pickup|pick\s*up|click\s*(?:and|&)\s*collect|collection)\b/i.test(`${option.type ?? ''} ${option.shippingServiceCode ?? ''} ${option.shippingCarrierCode ?? ''}`))
@@ -193,7 +232,7 @@ export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
   return {
     sourceListingId: item.itemId ?? '',
     title: item.title ?? '',
-    description: item.shortDescription ?? '',
+    description: listingDescription(item),
     conditionDescription: item.conditionDescription ?? '',
     categoryId: item.categories?.find((category) => category.categoryId)?.categoryId,
     price: Number(item.price?.value ?? 0),
@@ -208,7 +247,14 @@ export function normalizeEbayItem(item: EbaySearchItem): RawLaptopListing {
     imageUrls,
     localizedAspects: item.localizedAspects ?? [],
     buyingOptions: item.buyingOptions ?? [],
-    returnTerms: item.returnTerms ?? null,
+    returnTerms: item.returnTerms ? {
+      returnsAccepted: item.returnTerms.returnsAccepted,
+      returnPeriodDays: item.returnTerms.returnPeriod?.value != null && /day/i.test(item.returnTerms.returnPeriod.unit ?? 'DAY')
+        ? Number(item.returnTerms.returnPeriod.value)
+        : null,
+      returnShippingPaidBy: item.returnTerms.returnShippingCostPayer ?? null,
+    } : null,
+    sellerAccountType: seller.sellerAccountType ?? null,
     listedAt: item.itemCreationDate ?? null,
     scrapedAt: new Date().toISOString(),
     searchTerms: item.searchTerms ?? (item.searchTerm ? [item.searchTerm] : []),

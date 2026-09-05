@@ -171,6 +171,8 @@ test('folds free-text AI risk labels into the fixed categories and drops the res
   assert.equal(canonicalRiskLabel('not_a_laptop_listing'), 'not a laptop')
   assert.equal(canonicalRiskLabel('Obvious signs of use'), 'cosmetic wear')
   assert.equal(canonicalRiskLabel('Operating system information conflicts'), 'listing details conflict')
+  assert.equal(canonicalRiskLabel('No Dell warranty'), 'no manufacturer warranty')
+  assert.equal(canonicalRiskLabel('Manufacturer warranty expired'), 'no manufacturer warranty')
   for (const noise of ['No optical drive', 'Opened box', 'No WWAN option', 'Non-PayPal payment restriction', 'Original box not included', 'Not backlit', 'Operating system not included / FreeDOS']) {
     assert.equal(canonicalRiskLabel(noise), null, noise)
   }
