@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-09-09T21:52:42.850Z",
+  "refreshedAt": "2026-09-10T12:20:27.100Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -746,8 +746,8 @@
       "graphicsScore": 17353,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.videocardbenchmark.net/video_lookup.php?gpu=RTX%20A5500%20Laptop%20GPU&id=4562",
-      "observedAt": "2026-09-02",
-      "retrievedAt": "2026-09-02T21:58:19.923Z",
+      "observedAt": "2026-09-10",
+      "retrievedAt": "2026-09-10T12:20:27.100Z",
       "sampleCount": 294,
       "status": "validated",
       "providerVersion": "passmark-html-v2"
