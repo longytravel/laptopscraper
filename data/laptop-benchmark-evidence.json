@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-09-14T22:41:23.516Z",
+  "refreshedAt": "2026-09-15T12:48:50.775Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -763,6 +763,20 @@
       "observedAt": "2026-09-08",
       "retrievedAt": "2026-09-08T22:00:17.624Z",
       "sampleCount": 13,
+      "status": "validated",
+      "providerVersion": "passmark-html-v2"
+    },
+    "cpu:AMD Ryzen 9 8945HX": {
+      "kind": "cpu",
+      "canonical": "AMD Ryzen 9 8945HX",
+      "multiCoreScore": 51274,
+      "singleThreadScore": 3903,
+      "sourceName": "PassMark",
+      "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=AMD%20Ryzen%209%208945HX",
+      "verifiedName": "AMD Ryzen 9 8945HX",
+      "observedAt": "2026-09-15",
+      "retrievedAt": "2026-09-15T12:48:50.775Z",
+      "sampleCount": 465,
       "status": "validated",
       "providerVersion": "passmark-html-v2"
     }
