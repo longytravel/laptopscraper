@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-09-17T22:23:19.866Z",
+  "refreshedAt": "2026-09-18T12:20:20.107Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -367,14 +367,14 @@
     "cpu:AMD Ryzen AI 9 HX 375": {
       "kind": "cpu",
       "canonical": "AMD Ryzen AI 9 HX 375",
-      "multiCoreScore": 35408,
-      "singleThreadScore": 3986,
+      "multiCoreScore": 35463,
+      "singleThreadScore": 3990,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.cpubenchmark.net/cpu.php?cpu=AMD%20Ryzen%20AI%209%20HX%20375",
       "verifiedName": "AMD Ryzen AI 9 HX 375",
-      "observedAt": "2026-09-08",
-      "retrievedAt": "2026-09-08T22:00:17.624Z",
-      "sampleCount": 145,
+      "observedAt": "2026-09-18",
+      "retrievedAt": "2026-09-18T12:20:20.107Z",
+      "sampleCount": 147,
       "status": "validated",
       "providerVersion": "passmark-html-v2"
     },
