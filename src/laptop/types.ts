@@ -94,6 +94,8 @@ export interface LaptopListing extends ParsedLaptop {
   bestBuyFailures?: string[]
   benchmarkEvidenceAt?: string | null
   firstSeenAt?: string
+  /** Set by the dashboard when eBay's live price differs from the snapshot's. */
+  snapshotPrice?: number
   lastSeenAt?: string
   ramUpgradeable?: boolean | null
   aiEnrichment?: {

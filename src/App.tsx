@@ -89,6 +89,7 @@ function isNewListing(row: LaptopListing): boolean {
 function ageLabel(value: string): string {
   const milliseconds = Date.now() - new Date(value).getTime()
   const minutes = Math.max(0, Math.round(milliseconds / 60_000))
+  if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.round(minutes / 60)
   if (hours < 48) return `${hours}h ago`
@@ -318,7 +319,7 @@ function PowerChart({
         {selected ? (
           <>
             <div><LiveBadge status={live.get(selected.id)} capturedAt={capturedAt} /><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel} · {selected.ramGb} GB · {selected.condition}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected, { minRamGb: selected.ramTier })}</small></div>
-            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{(() => { const now = live.get(selected.id)?.price; return now != null && Math.abs(now - selected.plottedPrice) >= 1 ? <span className="upgrade-total">now {MONEY.format(now)} on eBay</span> : null })()}{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{selected.snapshotPrice != null && <span className="upgrade-total">{selected.plottedPrice < selected.snapshotPrice ? 'reduced' : 'raised'} from {MONEY.format(selected.snapshotPrice)}</span>}{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -490,8 +491,16 @@ function App() {
     return () => { cancelled = true }
   }, [liveIds])
 
+  // Ended listings leave; a changed price moves the dot to what eBay asks now.
   const liveListings = useMemo(
-    () => (dataset?.listings ?? []).filter((row) => live.get(row.id)?.state !== 'ended'),
+    () => (dataset?.listings ?? []).flatMap((row) => {
+      const status = live.get(row.id)
+      if (status?.state === 'ended') return []
+      if (status?.state === 'live' && status.price != null && Math.abs(status.price - row.price) >= 1) {
+        return [{ ...row, price: status.price, snapshotPrice: row.price }]
+      }
+      return [row]
+    }),
     [dataset, live],
   )
   const groups = useMemo(() => partitionResults(liveListings, filters, query), [liveListings, filters, query])
