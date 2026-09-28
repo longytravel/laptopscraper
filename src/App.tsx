@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowUpRight,
   Check,
@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   TriangleAlert,
+  X,
   Zap,
 } from 'lucide-react'
 
@@ -38,7 +39,8 @@ import {
   toggleSelection,
 } from './laptop/dashboard'
 import { createDefaultFilters } from './laptop/engine'
-import { assessBestBuy, effectivePrice } from './laptop/best-buy'
+import { assessBestBuy, effectivePrice, RAM_TIERS, RAM_UPGRADE_GBP } from './laptop/best-buy'
+import type { GateOptions, RamTier } from './laptop/best-buy'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
 
@@ -46,9 +48,22 @@ const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP
 const NUMBER = new Intl.NumberFormat('en-GB')
 
 type SetFilterKey = 'allowedConditions' | 'allowedBrands' | 'allowedCpuManufacturers' | 'allowedGpuFamilies' | 'allowedBuyingOptions' | 'allowedConfidence' | 'excludedRisks'
-type ResultMode = 'new' | 'matches' | 'needs-checking' | 'shortlist'
+type ResultMode = 'new' | 'matches' | 'ram32' | 'needs-checking' | 'shortlist'
 type SortMode = 'recommended' | 'value' | 'power' | 'price'
-const RESULT_MODES: ResultMode[] = ['new', 'matches', 'needs-checking', 'shortlist']
+type DrawerName = 'filters' | 'listings'
+const RESULT_MODES: ResultMode[] = ['new', 'matches', 'ram32', 'needs-checking', 'shortlist']
+const TIER_STORAGE_KEY = 'laptop-power-finder-ram-tiers-v1'
+
+function loadTiers(): Set<RamTier> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(TIER_STORAGE_KEY) ?? 'null')
+    const tiers = Array.isArray(parsed) ? RAM_TIERS.filter((tier) => parsed.includes(tier)) : []
+    if (tiers.length) return new Set(tiers)
+  } catch {
+    // Storage blocked or corrupt: fall back to both tiers.
+  }
+  return new Set(RAM_TIERS)
+}
 
 function signedPercent(power: number | null | undefined): string {
   if (power == null) return 'unknown'
@@ -126,20 +141,57 @@ function Switch({ checked, label, hint, onChange }: { checked: boolean; label: s
   )
 }
 
+function Drawer({ open, side, title, onClose, children }: { open: boolean; side: 'left' | 'right'; title: string; onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+  if (!open) return null
+  return (
+    <div className="drawer-layer">
+      <div className="drawer-scrim" onClick={onClose} />
+      <section className={`drawer drawer-${side}`} role="dialog" aria-modal="true" aria-label={title}>
+        <header className="drawer-header"><strong>{title}</strong><button type="button" className="icon-button" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`} autoFocus><X size={17} /></button></header>
+        <div className="drawer-body">{children}</div>
+      </section>
+    </div>
+  )
+}
+
+type ChartModel = ReturnType<typeof buildChartModel>
+
 function PowerChart({
-  rows,
+  model,
   selectedId,
   onSelect,
 }: {
-  rows: LaptopListing[]
+  model: ChartModel
   selectedId: string | null
   onSelect: (row: LaptopListing) => void
 }) {
   const clipId = useId().replace(/:/g, '')
-  const model = useMemo(() => buildChartModel(rows), [rows])
-  const width = 960
-  const height = 500
-  const pad = { top: 34, right: 34, bottom: 56, left: 64 }
+  const wrapRef = useRef<HTMLDivElement>(null)
+  // First guess from the window so a phone never paints the desktop layout;
+  // the observer then tracks the real container width.
+  const [measured, setMeasured] = useState(() => window.innerWidth - 36)
+  useLayoutEffect(() => {
+    const element = wrapRef.current
+    if (!element) return
+    const style = getComputedStyle(element)
+    const content = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    if (content > 0) setMeasured(Math.round(content))
+    const observer = new ResizeObserver(([entry]) => { if (entry.contentRect.width) setMeasured(Math.round(entry.contentRect.width)) })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  // Drawn at the container's own pixel width so labels stay readable on a
+  // phone instead of shrinking with a fixed 960-wide viewBox.
+  const width = Math.max(320, Math.min(1400, measured))
+  const compact = width < 600
+  const height = compact ? Math.round(width * 1.15) : Math.round(Math.min(640, Math.max(440, width * 0.5)))
+  const pad = compact ? { top: 20, right: 14, bottom: 46, left: 44 } : { top: 34, right: 34, bottom: 56, left: 64 }
   const innerWidth = width - pad.left - pad.right
   const innerHeight = height - pad.top - pad.bottom
   const x = (price: number) => pad.left + (price / 3000) * innerWidth
@@ -147,11 +199,21 @@ function PowerChart({
   // Clamped so a much faster machine widening the y-axis can never push the
   // label off the bottom of the plot.
   const baselineLabelY = Math.min(y(100) + 10, pad.top + innerHeight - 30)
-  const xTicks = [0, 500, 1000, 1500, 2000, 2500, 3000]
+  const xTicks = compact ? [0, 1000, 2000, 3000] : [0, 500, 1000, 1500, 2000, 2500, 3000]
   const yStep = Math.max(10, Math.ceil((model.yDomain[1] - model.yDomain[0]) / 6 / 10) * 10)
   const yTicks: number[] = []
   for (let value = Math.ceil(model.yDomain[0] / yStep) * yStep; value <= model.yDomain[1]; value += yStep) yTicks.push(value)
-  const frontierPath = model.frontier.map((point, index) => `${index ? 'L' : 'M'} ${x(point.plottedPrice)} ${y(point.plottedPower)}`).join(' ')
+  // The line joins only machines faster than everything cheaper. Frontier dots
+  // that earn their place on RAM or storage stay highlighted but off the line,
+  // which would otherwise zigzag.
+  const pathFor = (points: ChartListing[]) => {
+    let fastest = -Infinity
+    return points
+      .filter((point) => point.plottedPower > fastest && (fastest = point.plottedPower, true))
+      .map((point, index) => `${index ? 'L' : 'M'} ${x(point.plottedPrice)} ${y(point.plottedPower)}`).join(' ')
+  }
+  const frontierPath = pathFor(model.frontier)
+  const frontier32Path = pathFor(model.frontier32)
   const equalValuePowerAtMax = (3000 / BASELINE_PRICE) * 100
   const equalValuePath = `M ${x(0)} ${y(0)} L ${x(3000)} ${y(equalValuePowerAtMax)}`
   const valueLabelPower = Math.min(model.yDomain[1] - 5, Math.max(model.yDomain[0] + 8, (2020 / BASELINE_PRICE) * 100 + 18))
@@ -162,12 +224,12 @@ function PowerChart({
   }
 
   return (
-    <div className="chart-wrap">
+    <div className="chart-wrap" ref={wrapRef}>
       {model.points.length === 0 ? (
         <div className="chart-empty">
           <Filter size={28} aria-hidden="true" />
-          <strong>No scored laptops match these filters</strong>
-          <span>Lower a power or hardware threshold, or reset the controls.</span>
+          <strong>No laptops match these filters</strong>
+          <span>Switch on the other RAM tier, loosen a filter, or reset the controls.</span>
         </div>
       ) : (
         <svg className="power-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${clipId}-title ${clipId}-desc`}>
@@ -184,29 +246,30 @@ function PowerChart({
             {xTicks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{tick === 0 ? '£0' : `£${tick / 1000}k`}</text>)}
             {yTicks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
             <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">ADVERTISED PRICE</text>
-            <text transform={`translate(17 ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">BACKTESTING WORK PERFORMANCE</text>
+            <text transform={`translate(${compact ? 11 : 17} ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">{compact ? 'WORK PERFORMANCE' : 'BACKTESTING WORK PERFORMANCE'}</text>
           </g>
           <g clipPath={`url(#${clipId})`}>
             <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
             <line className="baseline-price" x1={x(BASELINE_PRICE)} x2={x(BASELINE_PRICE)} y1={pad.top} y2={height - pad.bottom} />
             <path className="equal-value-line" d={equalValuePath} />
-            <text className="value-region-label" x={x(2020)} y={y(valueLabelPower)}>BETTER VALUE THAN YOUR G16 ↑</text>
+            <text className="value-region-label" x={x(2020)} y={y(valueLabelPower)}>{compact ? 'BETTER VALUE ↑' : 'BETTER VALUE THAN YOUR G16 ↑'}</text>
+            {frontier32Path && <path className="pareto-line tier-32" d={frontier32Path} />}
             {frontierPath && <path className="pareto-line" d={frontierPath} />}
             {model.points.map((point) => {
               const isSelected = point.id === selectedId
               const isFrontier = model.frontierIds.has(point.id)
               const value = assessValue(point.plottedPower, point.valuePrice)
-              const radius = 5 + Math.max(0, Math.min(4, point.recommendationScore / 25))
+              const radius = (compact ? 4 : 5) + Math.max(0, Math.min(compact ? 3 : 4, point.recommendationScore / 25))
               return (
                 <circle
                   key={point.id}
-                  className={`listing-point value-${value.band}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
+                  className={`listing-point value-${value.band} tier-${point.ramTier}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
                   cx={x(point.plottedPrice)}
                   cy={y(point.plottedPower)}
                   r={radius}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${point.title}, ${MONEY.format(point.plottedPrice)} advertised, work performance ${point.plottedPower}, ${value.label}`}
+                  aria-label={`${point.title}, ${point.ramGb} GB, ${MONEY.format(point.plottedPrice)} advertised, work performance ${point.plottedPower}, ${value.label}`}
                   onClick={() => activate(point)}
                   onFocus={() => activate(point)}
                   onMouseEnter={() => activate(point)}
@@ -216,7 +279,7 @@ function PowerChart({
                       activate(point)
                     }
                   }}
-                ><title>{`${point.title}\n${MONEY.format(point.plottedPrice)} advertised · work performance ${point.plottedPower}\n${value.label}`}</title></circle>
+                ><title>{`${point.title}\n${point.ramGb} GB · ${MONEY.format(point.plottedPrice)} advertised · work performance ${point.plottedPower}\n${value.label}`}</title></circle>
               )
             })}
           </g>
@@ -224,17 +287,14 @@ function PowerChart({
             {/* Sits below the baseline line: every qualifying listing scores at
                 least 100, so the band underneath is always empty, while the band
                 above is where the cheapest near-baseline machines plot. */}
-            <rect x={x(BASELINE_PRICE) + 8} y={baselineLabelY} width="173" height="24" rx="2" />
-            <text x={x(BASELINE_PRICE) + 17} y={baselineLabelY + 16}>YOUR G16 · £1,170 · 100</text>
+            <rect x={x(BASELINE_PRICE) + 8} y={baselineLabelY} width={compact ? 118 : 173} height="24" rx="2" />
+            <text x={x(BASELINE_PRICE) + 17} y={baselineLabelY + 16}>{compact ? 'YOUR G16 · £1,170' : 'YOUR G16 · £1,170 · 100'}</text>
           </g>
         </svg>
       )}
-      <div className="chart-counts" aria-label="Plotted qualifying listings">
-        <strong>{model.points.length} plotted</strong>
-        <span>advertised item prices</span>
-        <span>all pass the replacement floor</span>
-      </div>
       <div className="chart-legend" aria-hidden="true">
+        <span><i className="legend-dot tier-64" />64 GB</span>
+        <span><i className="legend-dot tier-32" />32 GB (hollow)</span>
         <span><i className="legend-dot strong" />Strong value</span>
         <span><i className="legend-dot competitive" />Competitive</span>
         <span><i className="legend-dot weak" />Weak value</span>
@@ -244,8 +304,8 @@ function PowerChart({
       <div className="chart-selection" aria-live="polite">
         {selected ? (
           <>
-            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected)}</small></div>
-            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong><span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
+            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel} · {selected.ramGb} GB · {selected.condition}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected, { minRamGb: selected.ramTier })}</small></div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -254,13 +314,13 @@ function PowerChart({
   )
 }
 
-function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; shortlisted: boolean; onShortlist: () => void }) {
+function ListingCard({ row, gate = {}, shortlisted, onShortlist }: { row: LaptopListing; gate?: GateOptions; shortlisted: boolean; onShortlist: () => void }) {
   const risk = row.riskFlags.length > 0 || row.hardExcluded
-  const readiness = classifyReadiness(row)
-  const assessment = assessBestBuy(row)
+  const readiness = classifyReadiness(row, gate)
+  const assessment = assessBestBuy(row, gate)
   const value = assessment.workPerformance == null ? null : assessValue(assessment.workPerformance, assessment.effectivePrice)
   const readinessLabel = {
-    ready: 'Passes every floor',
+    ready: gate.minRamGb === 32 ? 'Passes at 32 GB' : 'Passes every floor',
     'specs-incomplete': 'Not a confirmed match',
   }[readiness]
   return (
@@ -289,7 +349,7 @@ function ListingCard({ row, shortlisted, onShortlist }: { row: LaptopListing; sh
         </div>
         <p className="seller-line">{row.sellerName} · {row.sellerFeedbackPercent == null ? 'feedback unknown' : `${row.sellerFeedbackPercent}% (${NUMBER.format(row.sellerFeedbackScore ?? 0)})`} · {row.location || 'location unknown'}</p>
         {row.missingSpecs.length > 0 && <p className="missing-line"><CircleAlert size={14} /> Check {row.missingSpecs.join(', ')} before buying</p>}
-        <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row)}</p>
+        <p className="recommendation-line"><Sparkles size={14} />{buildRecommendationReason(row, gate)}</p>
       </div>
       <div className="listing-metrics">
         <div><span>Advertised</span><strong>{MONEY.format(row.price)}</strong><small>{assessment.surplusCredit > 0 ? `value uses ${MONEY.format(assessment.effectivePrice)} after surplus credit` : 'postage is never ranked'}</small></div>
@@ -347,6 +407,17 @@ function App() {
   const [mode, setMode] = useState<ResultMode>('matches')
   const [sortMode, setSortMode] = useState<SortMode>('recommended')
   const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
+  const [tiers, setTiers] = useState<Set<RamTier>>(loadTiers)
+  const [drawer, setDrawer] = useState<DrawerName | null>(null)
+  const drawerTrigger = useRef<HTMLElement | null>(null)
+  const openDrawer = (name: DrawerName) => {
+    drawerTrigger.current = document.activeElement as HTMLElement | null
+    setDrawer(name)
+  }
+  const closeDrawer = useCallback(() => {
+    setDrawer(null)
+    requestAnimationFrame(() => drawerTrigger.current?.focus())
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -367,15 +438,24 @@ function App() {
     localStorage.setItem(SHORTLIST_STORAGE_KEY, serializeShortlist(shortlist))
   }, [shortlist])
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(TIER_STORAGE_KEY, JSON.stringify([...tiers]))
+    } catch {
+      // Remembering the toggle is a convenience only.
+    }
+  }, [tiers])
+
   const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
   const groups = useMemo(() => partitionResults(dataset?.listings ?? [], filters, query), [dataset, filters, query])
   const filtered = groups.matches
+  const ram32 = groups.ram32Matches
   const newMatches = groups.newMatches
-  const scoredMatches = groups.scored
   const needsChecking = groups.needsChecking
   const shortlistRows = useMemo(() => (dataset?.listings ?? []).filter((row) => shortlist.has(row.id)), [dataset, shortlist])
+  const gate = useMemo<GateOptions>(() => (mode === 'ram32' ? { minRamGb: 32 } : {}), [mode])
   const displayed = useMemo(() => {
-    const rows = mode === 'new' ? newMatches : mode === 'matches' ? filtered : mode === 'needs-checking' ? needsChecking : shortlistRows
+    const rows = mode === 'new' ? newMatches : mode === 'matches' ? filtered : mode === 'ram32' ? ram32 : mode === 'needs-checking' ? needsChecking : shortlistRows
     if (sortMode === 'price') return rows.slice().sort((a, b) => chartPrice(a).price - chartPrice(b).price)
     if (sortMode === 'power') return rows.slice().sort((a, b) => (b.workPerformance ?? -1) - (a.workPerformance ?? -1))
     if (sortMode === 'value') return rows.slice().sort((a, b) => {
@@ -383,14 +463,27 @@ function App() {
       const bValue = b.workPerformance == null ? -1 : assessValue(b.workPerformance, effectivePrice(b)).ratio
       return bValue - aValue
     })
-    if (mode === 'shortlist') return rows
-    return rankListings(rows)
-  }, [filtered, mode, needsChecking, newMatches, shortlistRows, sortMode])
-  const chart = useMemo(() => buildChartModel(scoredMatches), [scoredMatches])
+    if (mode === 'shortlist' || mode === 'needs-checking') return rows
+    return rankListings(rows, gate)
+  }, [filtered, gate, mode, needsChecking, newMatches, ram32, shortlistRows, sortMode])
+  const chart = useMemo(() => buildChartModel({
+    ram64: tiers.has(64) ? filtered : [],
+    ram32: tiers.has(32) ? ram32 : [],
+  }), [filtered, ram32, tiers])
 
-  const effectiveSelectedId = selectedId && scoredMatches.some((row) => row.id === selectedId)
+  const effectiveSelectedId = selectedId && chart.points.some((row) => row.id === selectedId)
     ? selectedId
-    : chart.points[0]?.id ?? null
+    : chart.frontier[0]?.id ?? chart.frontier32[0]?.id ?? chart.points[0]?.id ?? null
+
+  function toggleTier(tier: RamTier) {
+    setTiers((current) => {
+      const next = new Set(current)
+      if (next.has(tier)) next.delete(tier)
+      else next.add(tier)
+      // Never leave the chart with nothing to plot.
+      return next.size ? next : current
+    })
+  }
 
   function setNumber<K extends keyof LaptopFilters>(key: K, value: number) {
     setFilters((current) => ({ ...current, [key]: value }))
@@ -429,6 +522,14 @@ function App() {
     return <main className="load-state"><span className="loader" /><h1>Loading current eBay laptops</h1><p>Preparing power and price comparisons…</p></main>
   }
 
+  const tabs: Array<[ResultMode, string, number]> = [
+    ['new', 'New', newMatches.length],
+    ['matches', '64 GB', filtered.length],
+    ['ram32', '32 GB', ram32.length],
+    ['needs-checking', 'Needs info', needsChecking.length],
+    ['shortlist', 'Shortlist', shortlistRows.length],
+  ]
+
   return (
     <div className="app-shell">
       <header className="masthead">
@@ -438,13 +539,31 @@ function App() {
         </div>
         <div className="header-tools">
           <div className="data-status"><span className="live-pulse" /><div><strong>{dataset.listingCount} listings scanned</strong><span>Captured {ageLabel(dataset.generatedAt)} · {dataset.scoredCount} power-scored</span></div></div>
-          <button className="reset-button" type="button" onClick={reset}><RotateCcw size={15} />Reset</button>
+          <button className="drawer-button" type="button" onClick={() => openDrawer('filters')}><SlidersHorizontal size={15} />Filters</button>
+          <button className="drawer-button" type="button" onClick={() => openDrawer('listings')}><Laptop size={15} />Listings{newMatches.length > 0 && <span className="drawer-badge">{newMatches.length} new</span>}</button>
         </div>
       </header>
 
-      <div className="dashboard-layout">
-        <aside className="filter-rail" aria-label="Laptop filters">
-          <div className="filter-heading"><SlidersHorizontal size={17} /><strong>Decision controls</strong><span>{filtered.length} shown</span></div>
+      <main className="dashboard-main">
+        <section className="graph-section graph-hero">
+          <div className="section-heading">
+            <div><span>ADVERTISED PRICE / WORK PERFORMANCE · YOUR G16 = 100</span><h2>Where your money buys faster backtesting</h2></div>
+            <div className="tier-toggle" role="group" aria-label="RAM shown on the chart">
+              {RAM_TIERS.map((tier) => (
+                <button key={tier} type="button" className={`tier-button tier-${tier}${tiers.has(tier) ? ' is-active' : ''}`} aria-pressed={tiers.has(tier)} onClick={() => toggleTier(tier)}>
+                  <MemoryStick size={15} aria-hidden="true" />{tier} GB<span>{tier === 64 ? filtered.length : ram32.length}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {tiers.has(32) && <p className="tier-note"><MemoryStick size={14} aria-hidden="true" />Hollow dots have 32 GB and pass every other floor. A 64 GB kit costs about {MONEY.format(RAM_UPGRADE_GBP)} today; tap a dot for the total.</p>}
+          <PowerChart model={chart} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
+        </section>
+      </main>
+
+      <Drawer open={drawer === 'filters'} side="left" title="Filters" onClose={closeDrawer}>
+        <div className="filter-rail">
+          <div className="filter-heading"><SlidersHorizontal size={17} /><strong>Decision controls</strong><span>{chart.points.length} plotted</span><button className="reset-button" type="button" onClick={reset}><RotateCcw size={15} />Reset</button></div>
           <label className="search-control"><Search size={15} aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search model, CPU or GPU" /><span className="sr-only">Search listings</span></label>
 
           <FilterSection title="Price & power">
@@ -459,7 +578,7 @@ function App() {
           </FilterSection>
 
           <FilterSection title="Hardware">
-            <RangeControl label="Minimum RAM" value={filters.minRamGb} min={0} max={128} step={16} display={filters.minRamGb ? `${filters.minRamGb} GB${filters.minRamGb === 64 ? ' · your G16' : ''}` : 'Any'} onChange={(value) => setNumber('minRamGb', value)} />
+            <p className="filter-note">RAM is set by the 32 GB / 64 GB buttons on the chart.</p>
             <RangeControl label="Minimum VRAM" value={filters.minVramGb} min={0} max={24} step={2} display={filters.minVramGb ? `${filters.minVramGb} GB` : 'Any'} onChange={(value) => setNumber('minVramGb', value)} />
             <RangeControl label="Minimum storage" value={filters.minStorageGb} min={0} max={4096} step={256} display={filters.minStorageGb ? `${filters.minStorageGb >= 1024 ? `${filters.minStorageGb / 1024} TB` : `${filters.minStorageGb} GB`}` : 'Any'} onChange={(value) => setNumber('minStorageGb', value)} />
             <RangeControl label="Minimum screen" value={filters.minScreenInches} min={0} max={18} step={0.5} display={filters.minScreenInches ? `${filters.minScreenInches} in` : 'Any'} onChange={(value) => setNumber('minScreenInches', value)} />
@@ -487,49 +606,37 @@ function App() {
             <div className="chip-group"><span>CPU</span><div>{facets.cpuManufacturers.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedCpuManufacturers.has(value)} onChange={() => toggleFilter('allowedCpuManufacturers', value)} />)}</div></div>
             <div className="chip-group"><span>GPU</span><div>{facets.gpuFamilies.map((value) => <ToggleChip key={value} label={value} checked={filters.allowedGpuFamilies.has(value)} onChange={() => toggleFilter('allowedGpuFamilies', value)} />)}</div></div>
           </FilterSection>
-        </aside>
+        </div>
+      </Drawer>
 
-        <main className="dashboard-main">
-          <section className="decision-strip" aria-label="Current filter summary">
-            <div><span>QUALIFYING</span><strong>{chart.points.length}</strong><small>64 GB · 1 TB · no CPU downgrade</small></div>
-            <div><span>NEW IN 24H</span><strong>{newMatches.length}</strong><small>qualified additions since the last updates</small></div>
-            <div><span>BEST-BUY PICKS</span><strong>{chart.frontierIds.size}</strong><small>no cheaper equal-work rival</small></div>
-            <p><Sparkles size={16} /> Your i9-14900HX G16 is <strong>100</strong> for multi-core, single-thread and work performance. The RTX 4060 is a pass/fail floor; faster graphics do not change rank.</p>
-          </section>
-
-          <section className="graph-section">
-            <div className="section-heading"><div><span>ADVERTISED PRICE / WORK FIELD</span><h2>Where your money buys faster local backtesting</h2></div><div className="weight-readout"><Cpu size={16} />70% multi-core <span>/</span> 30% single-thread</div></div>
-            <PowerChart rows={scoredMatches} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
-          </section>
-
-          <section className="results-section">
-            <div className="results-toolbar">
-              <div className="result-tabs" role="tablist" aria-label="Result groups">
-                <button id="tab-new" role="tab" aria-controls="results-panel" aria-selected={mode === 'new'} tabIndex={mode === 'new' ? 0 : -1} className={mode === 'new' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'new')} onClick={() => setMode('new')}>New <span>{newMatches.length}</span></button>
-                <button id="tab-matches" role="tab" aria-controls="results-panel" aria-selected={mode === 'matches'} tabIndex={mode === 'matches' ? 0 : -1} className={mode === 'matches' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'matches')} onClick={() => setMode('matches')}>Matches <span>{filtered.length}</span></button>
-                <button id="tab-needs-checking" role="tab" aria-controls="results-panel" aria-selected={mode === 'needs-checking'} tabIndex={mode === 'needs-checking' ? 0 : -1} className={mode === 'needs-checking' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'needs-checking')} onClick={() => setMode('needs-checking')}>Needs info <span>{needsChecking.length}</span></button>
-                <button id="tab-shortlist" role="tab" aria-controls="results-panel" aria-selected={mode === 'shortlist'} tabIndex={mode === 'shortlist' ? 0 : -1} className={mode === 'shortlist' ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, 'shortlist')} onClick={() => setMode('shortlist')}>Shortlist <span>{shortlistRows.length}</span></button>
-              </div>
-              <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
+      <Drawer open={drawer === 'listings'} side="right" title="Listings" onClose={closeDrawer}>
+        <section className="results-section">
+          <div className="results-toolbar">
+            <div className="result-tabs" role="tablist" aria-label="Result groups">
+              {tabs.map(([value, label, count]) => (
+                <button key={value} id={`tab-${value}`} role="tab" aria-controls="results-panel" aria-selected={mode === value} tabIndex={mode === value ? 0 : -1} className={mode === value ? 'is-active' : ''} onKeyDown={(event) => handleTabKeyDown(event, value)} onClick={() => setMode(value)}>{label} <span>{count}</span></button>
+              ))}
             </div>
-            <div className="result-explainer">
-              {mode === 'new' && <><Sparkles size={16} />New since the last updates — every machine shown passes the complete replacement floor.</>}
-              {mode === 'matches' && <><ShieldCheck size={16} />Ranked by work value on advertised price less surplus RAM and storage credit, then evidence, seller safety, returns and condition.</>}
-              {mode === 'needs-checking' && <><CircleAlert size={16} />These are not recommendations: they fail a floor or still need better hardware evidence.</>}
-              {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
-            </div>
-            <div id="results-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
-              {displayed.length === 0 ? (
-                <div className="results-empty"><Laptop size={30} /><strong>{mode === 'shortlist' ? 'Your shortlist is empty' : 'No listings in this view'}</strong><span>{mode === 'shortlist' ? 'Use the heart button on any result to save it here.' : 'Reset or loosen the active filters.'}</span></div>
-              ) : mode === 'shortlist' ? (
-                <ShortlistComparison rows={displayed} onRemove={(id) => setShortlist((current) => toggleSelection(current, id))} />
-              ) : (
-                <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
-              )}
-            </div>
-          </section>
-        </main>
-      </div>
+            <label className="sort-control">Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}><option value="recommended">Recommended</option><option value="value">Best value</option><option value="power">Most powerful</option><option value="price">Lowest price</option></select></label>
+          </div>
+          <div className="result-explainer">
+            {mode === 'new' && <><Sparkles size={16} />New since the last updates — every machine shown passes the complete replacement floor.</>}
+            {mode === 'matches' && <><ShieldCheck size={16} />64 GB machines, ranked by work value on advertised price less surplus RAM and storage credit, then evidence, seller safety, returns and condition.</>}
+            {mode === 'ram32' && <><MemoryStick size={16} />32 GB machines that pass every other floor. Never sent to Telegram. Check the RAM is in slots, not soldered, before counting on an upgrade.</>}
+            {mode === 'needs-checking' && <><CircleAlert size={16} />These are not recommendations: they fail a floor or still need better hardware evidence.</>}
+            {mode === 'shortlist' && <><Heart size={16} />Your saved comparison stays in this browser.</>}
+          </div>
+          <div id="results-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
+            {displayed.length === 0 ? (
+              <div className="results-empty"><Laptop size={30} /><strong>{mode === 'shortlist' ? 'Your shortlist is empty' : 'No listings in this view'}</strong><span>{mode === 'shortlist' ? 'Use the heart button on any result to save it here.' : 'Reset or loosen the active filters.'}</span></div>
+            ) : mode === 'shortlist' ? (
+              <ShortlistComparison rows={displayed} onRemove={(id) => setShortlist((current) => toggleSelection(current, id))} />
+            ) : (
+              <div className="listing-stack">{displayed.slice(0, 100).map((row) => <ListingCard key={row.id} row={row} gate={gate} shortlisted={shortlist.has(row.id)} onShortlist={() => setShortlist((current) => toggleSelection(current, row.id))} />)}</div>
+            )}
+          </div>
+        </section>
+      </Drawer>
 
       <footer><span>Official eBay Browse API · {dataset.marketplaceId}</span><span>Benchmark catalog {dataset.benchmarkVersion}</span><span>Generated {new Date(dataset.generatedAt).toLocaleString('en-GB')}</span></footer>
     </div>

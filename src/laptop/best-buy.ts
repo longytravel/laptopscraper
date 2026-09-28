@@ -16,7 +16,9 @@ export const G16_REFERENCE = {
  * come off the price the value ratio is measured against.
  */
 export const SURPLUS_CREDIT = {
-  ramGbpPerGb: 2.5,
+  // DDR5 SO-DIMM, 28 September 2026: the cheapest 64 GB of DDR5-5600 on Amazon
+  // UK was two 32 GB modules at £210 each (£6.56/GB). It was £2.50 in July.
+  ramGbpPerGb: 6.5,
   storageGbpPerGb: 0.06,
 } as const
 
@@ -32,6 +34,39 @@ export const GATE_TOLERANCE = {
   singleThread: 95,
   graphics: 95,
 } as const
+
+/**
+ * RAM floors the dashboard can plot. 64 GB is the replacement floor and the
+ * only one Telegram ever recommends; 32 GB shows what a machine costs if you
+ * accept, or upgrade from, 32 GB.
+ */
+export const RAM_TIERS = [64, 32] as const
+export type RamTier = typeof RAM_TIERS[number]
+
+export interface GateOptions {
+  minRamGb?: RamTier
+}
+
+/**
+ * Taking a 32 GB laptop to 64 GB means replacing both sticks, not adding to
+ * them, so the estimate is a whole 64 GB kit at street price.
+ */
+export const RAM_UPGRADE_GBP = G16_REFERENCE.ramGb * SURPLUS_CREDIT.ramGbpPerGb
+
+/**
+ * Platforms that only ship with soldered or on-package memory, so the upgrade
+ * route is closed: Strix Halo (Ryzen AI Max) and Lunar Lake (Core Ultra 200V).
+ * Other laptops can still solder RAM, which is why the dashboard says to check.
+ */
+export function ramIsSoldered(listing: Pick<LaptopListing, 'cpuModel'>): boolean {
+  return /Ryzen AI Max|Core Ultra [579] 2\d{2}V\b/i.test(listing.cpuModel ?? '')
+}
+
+/** What it costs to bring this machine up to the 64 GB floor; null when it cannot be done. */
+export function ramUpgradeCost(listing: Pick<LaptopListing, 'cpuModel' | 'ramGb'>): number | null {
+  if ((listing.ramGb ?? 0) >= G16_REFERENCE.ramGb) return 0
+  return ramIsSoldered(listing) ? null : RAM_UPGRADE_GBP
+}
 
 export interface BestBuyAssessment {
   eligible: boolean
@@ -72,7 +107,8 @@ function hasUnresolvedConflict(listing: LaptopListing): boolean {
   return listing.warnings.some((warning) => /^conflicting\b/i.test(warning))
 }
 
-export function assessBestBuy(listing: LaptopListing): BestBuyAssessment {
+export function assessBestBuy(listing: LaptopListing, options: GateOptions = {}): BestBuyAssessment {
+  const minRamGb = options.minRamGb ?? G16_REFERENCE.ramGb
   const multiPower = listing.cpuMultiPower ?? null
   const singlePower = listing.cpuSinglePower ?? null
   const power = workPerformance(multiPower, singlePower)
@@ -84,7 +120,7 @@ export function assessBestBuy(listing: LaptopListing): BestBuyAssessment {
     if (multiPower < 100) failures.push('multi-core below G16')
     if (singlePower < GATE_TOLERANCE.singleThread) failures.push('single-thread more than 5% below G16')
   }
-  if ((listing.ramGb ?? 0) < G16_REFERENCE.ramGb) failures.push('RAM below 64 GB')
+  if ((listing.ramGb ?? 0) < minRamGb) failures.push(`RAM below ${minRamGb} GB`)
   if ((listing.storageGb ?? 0) < G16_REFERENCE.storageGb) failures.push('storage below 1 TB')
   if ((listing.gpuPower ?? 0) < GATE_TOLERANCE.graphics) failures.push('graphics more than 5% below RTX 4060')
   if (hasUnresolvedConflict(listing)) failures.push('unresolved specification conflict')
@@ -103,9 +139,9 @@ export function assessBestBuy(listing: LaptopListing): BestBuyAssessment {
   }
 }
 
-function dominates(a: LaptopListing, b: LaptopListing): boolean {
-  const aAssessment = assessBestBuy(a)
-  const bAssessment = assessBestBuy(b)
+function dominates(a: LaptopListing, b: LaptopListing, options: GateOptions): boolean {
+  const aAssessment = assessBestBuy(a, options)
+  const bAssessment = assessBestBuy(b, options)
   if (!aAssessment.eligible || !bAssessment.eligible) return false
 
   const noWorse = aAssessment.effectivePrice <= bAssessment.effectivePrice
@@ -120,10 +156,10 @@ function dominates(a: LaptopListing, b: LaptopListing): boolean {
   return noWorse && strictlyBetter
 }
 
-export function bestBuyFrontier(listings: LaptopListing[]): LaptopListing[] {
-  const eligible = listings.filter((listing) => assessBestBuy(listing).eligible)
+export function bestBuyFrontier(listings: LaptopListing[], options: GateOptions = {}): LaptopListing[] {
+  const eligible = listings.filter((listing) => assessBestBuy(listing, options).eligible)
   return eligible.filter((listing, index) => !eligible.some((candidate, candidateIndex) => (
-    candidateIndex !== index && dominates(candidate, listing)
+    candidateIndex !== index && dominates(candidate, listing, options)
   )))
 }
 
@@ -136,10 +172,10 @@ function conditionRank(condition: string): number {
   return 0
 }
 
-export function rankBestBuys(listings: LaptopListing[]): LaptopListing[] {
-  return bestBuyFrontier(listings).sort((a, b) => {
-    const aAssessment = assessBestBuy(a)
-    const bAssessment = assessBestBuy(b)
+export function rankBestBuys(listings: LaptopListing[], options: GateOptions = {}): LaptopListing[] {
+  return bestBuyFrontier(listings, options).sort((a, b) => {
+    const aAssessment = assessBestBuy(a, options)
+    const bAssessment = assessBestBuy(b, options)
     return (bAssessment.workValue! - aAssessment.workValue!)
       || Date.parse(b.benchmarkEvidenceAt ?? '1970-01-01') - Date.parse(a.benchmarkEvidenceAt ?? '1970-01-01')
       || (b.sellerFeedbackPercent ?? 0) - (a.sellerFeedbackPercent ?? 0)

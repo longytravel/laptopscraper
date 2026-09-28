@@ -1,9 +1,11 @@
-import { assessBestBuy, bestBuyFrontier, G16_REFERENCE, rankBestBuys } from './best-buy'
+import { assessBestBuy, bestBuyFrontier, G16_REFERENCE, rankBestBuys, ramUpgradeCost } from './best-buy'
+import type { GateOptions, RamTier } from './best-buy'
 import type { LaptopFilters, LaptopListing } from './types'
 
 export const SHORTLIST_STORAGE_KEY = 'laptop-power-finder-shortlist-v1'
 export const BASELINE_PRICE = G16_REFERENCE.advertisedPrice
 export const BASELINE_POWER = 100
+const NUMBER_FORMAT = new Intl.NumberFormat('en-GB')
 
 export type ListingReadiness = 'ready' | 'specs-incomplete'
 export type PriceCertainty = 'exact'
@@ -52,13 +54,22 @@ export function deriveFacets(listings: LaptopListing[]) {
   }
 }
 
-export function rankListings(listings: LaptopListing[]): LaptopListing[] {
-  return rankBestBuys(listings)
+export function rankListings(listings: LaptopListing[], options: GateOptions = {}): LaptopListing[] {
+  return rankBestBuys(listings, options)
 }
 
-export function classifyReadiness(listing: LaptopListing): ListingReadiness {
-  return assessBestBuy(listing).eligible ? 'ready' : 'specs-incomplete'
+export function classifyReadiness(listing: LaptopListing, options: GateOptions = {}): ListingReadiness {
+  return assessBestBuy(listing, options).eligible ? 'ready' : 'specs-incomplete'
 }
+
+/** The upgrade line a 32 GB machine needs; empty for one already at 64 GB. */
+export function upgradeNote(listing: LaptopListing): string | null {
+  const cost = ramUpgradeCost(listing)
+  if (cost === 0) return null
+  if (cost == null) return `${listing.ramGb} GB soldered, so it cannot be upgraded to 64 GB`
+  return `${listing.ramGb} GB as listed; about £${Math.round(cost)} for a 64 GB kit makes £${NUMBER_FORMAT.format(Math.round(listing.price + cost))} — check the RAM is not soldered`
+}
+
 
 export function chartPrice(listing: LaptopListing): { price: number; certainty: PriceCertainty } {
   return { price: listing.price, certainty: 'exact' }
@@ -89,15 +100,15 @@ function signedPercent(power: number | null | undefined): string {
   return `${percentage >= 0 ? '+' : ''}${percentage}%`
 }
 
-export function buildRecommendationReason(listing: LaptopListing): string {
-  const assessment = assessBestBuy(listing)
+export function buildRecommendationReason(listing: LaptopListing, options: GateOptions = {}): string {
+  const assessment = assessBestBuy(listing, options)
   if (!assessment.eligible) return `Not a confirmed match. ${assessment.failures.join('; ') || 'Hardware evidence is incomplete'}.`
 
   const parts = [
     `Multi-core ${signedPercent(listing.cpuMultiPower)} and single-thread ${signedPercent(listing.cpuSinglePower)}`,
     `work performance ${signedPercent(assessment.workPerformance)}`,
     assessValue(assessment.workPerformance!, assessment.effectivePrice).label,
-    `${listing.ramGb} GB RAM`,
+    upgradeNote(listing) ?? `${listing.ramGb} GB RAM`,
   ]
   if (assessment.surplusCredit > 0) {
     parts.push(`£${Math.round(assessment.surplusCredit)} credited for surplus RAM and storage`)
@@ -159,12 +170,16 @@ export function partitionResults(
   now = new Date(),
 ) {
   const normalizedQuery = query.trim().toLowerCase()
-  const coordinated = applyDashboardFilters(listings, filters)
-  const searched = normalizedQuery
-    ? coordinated.filter((row) => `${row.title} ${row.cpuModel ?? ''} ${row.gpuModel ?? ''} ${row.brand ?? ''}`.toLowerCase().includes(normalizedQuery))
-    : coordinated
+  const search = (rows: LaptopListing[]) => normalizedQuery
+    ? rows.filter((row) => `${row.title} ${row.cpuModel ?? ''} ${row.gpuModel ?? ''} ${row.brand ?? ''}`.toLowerCase().includes(normalizedQuery))
+    : rows
+  const searched = search(applyDashboardFilters(listings, filters))
   const matches = searched.filter((row) => assessBestBuy(row).eligible)
   const needsChecking = searched.filter((row) => !assessBestBuy(row).eligible)
+  // Passes every floor with RAM relaxed to 32 GB, and is short of 64 GB. The
+  // RAM filter is lowered for this set only: the chart's tier toggle is the control.
+  const ram32Matches = search(applyDashboardFilters(listings, { ...filters, minRamGb: 32 }))
+    .filter((row) => (row.ramGb ?? 0) < G16_REFERENCE.ramGb && assessBestBuy(row, { minRamGb: 32 }).eligible)
   const newMatches = matches.filter((row) => {
     if (!row.firstSeenAt) return false
     const age = now.getTime() - Date.parse(row.firstSeenAt)
@@ -173,6 +188,7 @@ export function partitionResults(
 
   return {
     matches,
+    ram32Matches,
     newMatches,
     scored: matches,
     needsChecking,
@@ -190,13 +206,22 @@ export interface ChartListing extends LaptopListing {
   /** Advertised price less surplus RAM and storage credit — what value is measured against. */
   valuePrice: number
   surplusCredit: number
+  ramTier: RamTier
+  /** 0 at 64 GB; the kit price for a 32 GB machine; null when the RAM is soldered. */
+  upgradeCost: number | null
 }
 
-export function buildChartModel(listings: LaptopListing[]) {
-  const points: ChartListing[] = listings.flatMap((listing) => {
+export interface ChartTiers {
+  ram64: LaptopListing[]
+  ram32?: LaptopListing[]
+}
+
+export function buildChartModel(listings: LaptopListing[] | ChartTiers) {
+  const tiers: ChartTiers = Array.isArray(listings) ? { ram64: listings } : listings
+  const toPoints = (rows: LaptopListing[], ramTier: RamTier): ChartListing[] => rows.flatMap((listing) => {
     const plottedPower = listing.workPerformance
     if (plottedPower == null) return []
-    const assessment = assessBestBuy(listing)
+    const assessment = assessBestBuy(listing, { minRamGb: ramTier })
     return [{
       ...listing,
       plottedPrice: listing.price,
@@ -204,13 +229,22 @@ export function buildChartModel(listings: LaptopListing[]) {
       plottedPower,
       valuePrice: assessment.effectivePrice,
       surplusCredit: assessment.surplusCredit,
+      ramTier,
+      upgradeCost: ramUpgradeCost(listing),
     }]
   })
+  const ram64Points = toPoints(tiers.ram64, 64)
+  const ram32Points = toPoints(tiers.ram32 ?? [], 32)
+  const points = [...ram32Points, ...ram64Points]
   const highest = Math.max(100, ...points.map((point) => point.plottedPower))
   const lowest = Math.min(100, ...points.map((point) => point.plottedPower))
   const yMinimum = Math.max(0, Math.floor((lowest - 15) / 10) * 10)
   const yMaximum = Math.ceil((highest + 12) / 10) * 10
-  const frontier = bestBuyFrontier(points)
+  const frontierFor = (tierPoints: ChartListing[], minRamGb: RamTier) => bestBuyFrontier(tierPoints, { minRamGb })
+    .map((point) => tierPoints.find((candidate) => candidate.id === point.id)!)
+    .sort((a, b) => a.plottedPrice - b.plottedPrice)
+  const frontier = frontierFor(ram64Points, 64)
+  const frontier32 = frontierFor(ram32Points, 32)
 
   return {
     points,
@@ -218,14 +252,10 @@ export function buildChartModel(listings: LaptopListing[]) {
     yDomain: [yMinimum, yMaximum] as [number, number],
     exactPointCount: points.length,
     lowerBoundPointCount: 0,
-    frontierIds: new Set(frontier.map((point) => point.id)),
-    frontier: frontier.map((point) => ({
-      ...point,
-      plottedPrice: point.price,
-      priceCertainty: 'exact' as const,
-      plottedPower: point.workPerformance!,
-      valuePrice: assessBestBuy(point).effectivePrice,
-      surplusCredit: assessBestBuy(point).surplusCredit,
-    })),
+    ram64Count: ram64Points.length,
+    ram32Count: ram32Points.length,
+    frontierIds: new Set([...frontier, ...frontier32].map((point) => point.id)),
+    frontier,
+    frontier32,
   }
 }

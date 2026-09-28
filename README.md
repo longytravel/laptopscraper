@@ -18,6 +18,15 @@ Postage is deliberately excluded from filtering, ranking and recommendation word
 
 Listings with missing or conflicting evidence stay in the separate **Needs info** view and are never sent as buying recommendations.
 
+## Dashboard
+
+The price / work-performance scatter chart is the whole page. Filters and the listing cards open in drawers from the header. Two buttons above the chart, **64 GB** and **32 GB**, choose what is plotted, and both can be on:
+
+- **64 GB** (solid dots) are the recommendations described above.
+- **32 GB** (hollow dots) have 32 to 63 GB RAM and pass every other floor. Tapping one shows its advertised price and the total with a 64 GB kit, costed at 64 GB × the RAM street price (£416), because both sticks are replaced. Strix Halo and Lunar Lake machines are marked as soldered. These are never sent to Telegram.
+
+The best-buy line joins only machines faster than everything cheaper, one line per RAM tier.
+
 ## Backtesting work score
 
 All comparisons use the G16 as `100`:
@@ -27,14 +36,14 @@ multiCore = 100 × candidateMultiCore / G16MultiCore
 singleThread = 100 × candidateSingleThread / G16SingleThread
 workPerformance = 100 × (multiCore / 100)^0.70 × (singleThread / 100)^0.30
 
-surplusCredit = max(0, ramGb - 64) × £2.50 + max(0, storageGb - 1024) × £0.06
+surplusCredit = max(0, ramGb - 64) × £6.50 + max(0, storageGb - 1024) × £0.06
 effectivePrice = max(£1, advertisedPrice - surplusCredit)
 workValue = (workPerformance / effectivePrice) / (100 / 1170)
 ```
 
 Multi-core receives 70% because local optimizer work can run across parallel CPU workers. Single-thread receives 30% because each trial and serial phase still depends on one thread. GPU speed above the RTX 4060 floor has zero ranking weight.
 
-RAM and storage above the floor never touch `workPerformance`, because more of either does not make a single backtest run faster. They earn credit through `effectivePrice` instead: surplus hardware saves you buying the part separately, so it comes off the price that value is measured against, at street cost (DDR5 SO-DIMM ~£2.50/GB, NVMe ~£0.06/GB). `workPerformance` therefore stays an honest speed measure and is never inflated by capacity. The advertised price is still what the dashboard plots and what you pay; only the value ratio uses the credited figure.
+RAM and storage above the floor never touch `workPerformance`, because more of either does not make a single backtest run faster. They earn credit through `effectivePrice` instead: surplus hardware saves you buying the part separately, so it comes off the price that value is measured against, at street cost (DDR5 SO-DIMM ~£6.50/GB since the 2026 memory price rise, NVMe ~£0.06/GB). `workPerformance` therefore stays an honest speed measure and is never inflated by capacity. The advertised price is still what the dashboard plots and what you pay; only the value ratio uses the credited figure.
 
 CPU comparisons are always split into multi-core and single-thread figures; the app never claims that a processor is simply one percentage “better.” Benchmark evidence is refreshed when more than seven days old. On 2 September 2026 every stored CPU figure was cross-checked against PassMark's laptop and single-thread charts and every GPU figure against its GPU charts; all matched to the digit.
 

@@ -148,3 +148,28 @@ test('recommendation explains CPU dimensions, work value, memory and returns', (
   assert.match(reason, /returns accepted/i)
   assert.doesNotMatch(reason, /postage/i)
 })
+
+test('the 32 GB tier holds machines short only on RAM, and never leaks into 64 GB matches', () => {
+  const ready = listing('ready', 1700)
+  const short = listing('short', 1300, { ramGb: 32 })
+  const tiny = listing('tiny', 900, { ramGb: 16 })
+  const slow = listing('slow', 1000, { ramGb: 32, cpuMultiPower: 90 })
+  const groups = partitionResults([ready, short, tiny, slow], createDefaultFilters())
+
+  assert.deepEqual(groups.matches.map((row) => row.id), [ready.id])
+  assert.deepEqual(groups.ram32Matches.map((row) => row.id), [short.id])
+  assert.equal(classifyReadiness(short), 'specs-incomplete')
+  assert.equal(classifyReadiness(short, { minRamGb: 32 }), 'ready')
+  assert.match(buildRecommendationReason(short, { minRamGb: 32 }), /32 GB as listed; about £416 for a 64 GB kit makes £1,716/)
+})
+
+test('chart model tags each point with its RAM tier and keeps a separate frontier per tier', () => {
+  const ready = listing('ready', 1700)
+  const short = listing('short', 1300, { ramGb: 32 })
+  const model = buildChartModel({ ram64: [ready], ram32: [short] })
+
+  assert.deepEqual(model.points.map((point) => [point.id, point.ramTier, point.upgradeCost]), [[short.id, 32, 416], [ready.id, 64, 0]])
+  assert.deepEqual(model.frontier.map((point) => point.id), [ready.id])
+  assert.deepEqual(model.frontier32.map((point) => point.id), [short.id])
+  assert.equal(buildChartModel([ready]).ram32Count, 0)
+})

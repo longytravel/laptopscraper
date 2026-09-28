@@ -6,6 +6,7 @@ import {
   bestBuyFrontier,
   effectivePrice,
   rankBestBuys,
+  ramUpgradeCost,
   surplusCredit,
   workPerformance,
   workValueRatio,
@@ -80,8 +81,8 @@ test('ignores postage and GPU uplift while enforcing every replacement floor', (
 test('credits surplus RAM and storage at market cost, never below the floor', () => {
   assert.equal(surplusCredit(64, 1024), 0)
   assert.equal(surplusCredit(32, 512), 0)
-  assert.equal(surplusCredit(128, 1024), 160)
-  assert.equal(surplusCredit(128, 6144), 467.2)
+  assert.equal(surplusCredit(128, 1024), 416)
+  assert.equal(surplusCredit(128, 6144), 723.2)
   assert.equal(surplusCredit(null, null), 0)
 })
 
@@ -89,9 +90,9 @@ test('measures value against the credited price while leaving work performance u
   const spacious = makeListing({ price: 2849, cpuMultiPower: 100, cpuSinglePower: 100, ramGb: 128, storageGb: 6144 })
   const result = assessBestBuy(spacious)
 
-  assert.equal(effectivePrice(spacious), 2381.8)
+  assert.equal(effectivePrice(spacious), 2125.8)
   assert.equal(result.workPerformance, 100, 'surplus hardware must never inflate the speed measure')
-  assert.equal(result.workValue, workValueRatio(100, 2381.8))
+  assert.equal(result.workValue, workValueRatio(100, 2125.8))
   assert.ok(result.workValue! > workValueRatio(100, 2849)!)
 })
 
@@ -147,4 +148,15 @@ test('ranks eligible frontier listings by work value and safety evidence', () =>
   const rejected = makeListing({ id: 'rejected', cpuSinglePower: 94 })
 
   assert.deepEqual(rankBestBuys([highPower, rejected, highValue]).map((row) => row.id), ['high-value', 'high-power'])
+})
+
+test('a relaxed 32 GB floor changes only the RAM gate, and soldered RAM closes the upgrade route', () => {
+  const short = makeListing({ ramGb: 32 })
+
+  assert.deepEqual(assessBestBuy(short).failures, ['RAM below 64 GB'])
+  assert.equal(assessBestBuy(short, { minRamGb: 32 }).eligible, true)
+  assert.deepEqual(assessBestBuy(makeListing({ ramGb: 16 }), { minRamGb: 32 }).failures, ['RAM below 32 GB'])
+  assert.equal(ramUpgradeCost(short), 416)
+  assert.equal(ramUpgradeCost(makeListing({ ramGb: 64 })), 0)
+  assert.equal(ramUpgradeCost({ ramGb: 32, cpuModel: 'AMD Ryzen AI Max+ 395' }), null)
 })
