@@ -1,9 +1,36 @@
-import { classifyItemResponse } from '../src/laptop/live-status'
+import type { LiveStatus } from '../src/laptop/live-status'
+
+// Self-contained on purpose: a runtime import of ../src failed to resolve on
+// Vercel (FUNCTION_INVOCATION_FAILED). Type-only imports are erased, so fine.
 
 // Vercel function: is this eBay listing still for sale? Needs EBAY_CLIENT_ID
 // and EBAY_CLIENT_SECRET in the Vercel project's environment variables. Each
 // uncached call spends one Browse API call from the 5,000/day quota the
 // collector also uses, so answers are cached at Vercel's edge per listing.
+
+interface EbayItemBody {
+  itemEndDate?: string
+  price?: { value?: string }
+  estimatedAvailabilities?: Array<{ estimatedAvailabilityStatus?: string }>
+}
+
+/**
+ * Reads a Browse API getItem response. An ended fixed-price listing can still
+ * report IN_STOCK, so the end date is what decides it: on 28 September 2026 a
+ * listing that sold at 16:58 came back IN_STOCK with itemEndDate 16:58.
+ */
+export function classifyItemResponse(httpStatus: number, body: EbayItemBody | null, now = new Date()): Omit<LiveStatus, 'id' | 'checkedAt'> {
+  if (httpStatus === 404 || httpStatus === 410) return { state: 'ended' }
+  if (httpStatus < 200 || httpStatus >= 300 || !body) return { state: 'unknown' }
+  const price = body.price?.value == null ? undefined : Number(body.price.value)
+  if (body.itemEndDate && Date.parse(body.itemEndDate) <= now.getTime()) {
+    return { state: 'ended', endedAt: body.itemEndDate, price }
+  }
+  if (body.estimatedAvailabilities?.some((entry) => entry.estimatedAvailabilityStatus === 'OUT_OF_STOCK')) {
+    return { state: 'ended', price }
+  }
+  return { state: 'live', price }
+}
 
 const TOKEN_URL = 'https://api.ebay.com/identity/v1/oauth2/token'
 let token: { value: string; expiresAt: number } | null = null

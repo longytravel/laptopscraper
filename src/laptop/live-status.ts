@@ -16,30 +16,6 @@ export interface LiveStatus {
   checkedAt: string
 }
 
-interface EbayItemBody {
-  itemEndDate?: string
-  price?: { value?: string }
-  estimatedAvailabilities?: Array<{ estimatedAvailabilityStatus?: string }>
-}
-
-/**
- * Reads a Browse API getItem response. An ended fixed-price listing can still
- * report IN_STOCK, so the end date is what decides it: on 28 September 2026 a
- * listing that sold at 16:58 came back IN_STOCK with itemEndDate 16:58.
- */
-export function classifyItemResponse(httpStatus: number, body: EbayItemBody | null, now = new Date()): Omit<LiveStatus, 'id' | 'checkedAt'> {
-  if (httpStatus === 404 || httpStatus === 410) return { state: 'ended' }
-  if (httpStatus < 200 || httpStatus >= 300 || !body) return { state: 'unknown' }
-  const price = body.price?.value == null ? undefined : Number(body.price.value)
-  if (body.itemEndDate && Date.parse(body.itemEndDate) <= now.getTime()) {
-    return { state: 'ended', endedAt: body.itemEndDate, price }
-  }
-  if (body.estimatedAvailabilities?.some((entry) => entry.estimatedAvailabilityStatus === 'OUT_OF_STOCK')) {
-    return { state: 'ended', price }
-  }
-  return { state: 'live', price }
-}
-
 export type StatusFetcher = (id: string) => Promise<LiveStatus | 'unavailable'>
 
 /**
@@ -81,7 +57,9 @@ export async function checkListings(
 export async function fetchListingStatus(id: string): Promise<LiveStatus | 'unavailable'> {
   try {
     const response = await fetch(`/api/listing-status?id=${encodeURIComponent(id)}`)
-    if (response.status === 503 || response.status === 404) return 'unavailable'
+    // 404: no function deployed (local preview). 5xx: not configured, quota
+    // spent or the function failed. All mean stop asking, not "unknown" per dot.
+    if (response.status === 404 || response.status >= 500) return 'unavailable'
     if (!response.ok) return { id, state: 'unknown', checkedAt: new Date().toISOString() }
     return await response.json() as LiveStatus
   } catch {

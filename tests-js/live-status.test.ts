@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { checkListings, classifyItemResponse } from '../src/laptop/live-status.ts'
+import { classifyItemResponse } from '../api/listing-status.ts'
+import { checkListings } from '../src/laptop/live-status.ts'
 import type { LiveStatus } from '../src/laptop/live-status.ts'
 
 const now = new Date('2026-09-28T21:00:00Z')
