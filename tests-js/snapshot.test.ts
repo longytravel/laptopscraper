@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { enrichListing } from '../src/laptop/engine.ts'
-import { mergeSeenTimestamps, newEligibleIds, recentBestBuys } from '../src/laptop/snapshot.ts'
+import { mergeSeenTimestamps, newEligibleIds, recentBestBuys, updateFirstSeenHistory } from '../src/laptop/snapshot.ts'
 import type { LaptopListing } from '../src/laptop/types.ts'
 
 function row(id: string, overrides: Partial<LaptopListing> = {}): LaptopListing {
@@ -47,4 +47,14 @@ test('marks eligible listings first seen within the last 24 hours as recent', ()
     row('rejected', { bestBuyEligible: false, firstSeenAt: '2026-07-22T19:00:00Z' }),
   ]
   assert.deepEqual(recentBestBuys(rows, now).map((listing) => listing.id), ['recent'])
+})
+
+test('a listing that drops out of one run keeps its original first-seen time when it returns', () => {
+  const history = updateFirstSeenHistory({}, [row('flaky', { firstSeenAt: '2026-09-15T12:00:00Z' })])
+  // The previous dataset no longer holds it: it was missing from the last run's search results.
+  const rows = mergeSeenTimestamps([], [row('flaky'), row('fresh')], '2026-09-28T15:44:00Z', history)
+
+  assert.equal(rows[0].firstSeenAt, '2026-09-15T12:00:00Z')
+  assert.equal(rows[1].firstSeenAt, '2026-09-28T15:44:00Z')
+  assert.deepEqual(updateFirstSeenHistory(history, rows), { flaky: '2026-09-15T12:00:00Z', fresh: '2026-09-28T15:44:00Z' })
 })

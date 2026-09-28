@@ -81,7 +81,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/data/laptop-listings.json data/laptop-benchmark-evidence.json data/laptop-alert-state.json
+          git add public/data/laptop-listings.json data/laptop-benchmark-evidence.json data/laptop-alert-state.json data/laptop-first-seen.json
           git diff --cached --quiet || git commit -m "chore: refresh laptop alerts"
           git push
 

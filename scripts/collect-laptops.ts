@@ -5,7 +5,8 @@ import path from 'node:path'
 
 import { BENCHMARK_VERSION } from '../src/laptop/benchmarks'
 import { enrichListing } from '../src/laptop/engine'
-import { mergeSeenTimestamps } from '../src/laptop/snapshot'
+import { mergeSeenTimestamps, updateFirstSeenHistory } from '../src/laptop/snapshot'
+import type { FirstSeenHistory } from '../src/laptop/snapshot'
 import type { LaptopDataset } from '../src/laptop/types'
 import {
   canUseCachedSearchFallback,
@@ -147,6 +148,13 @@ async function main(): Promise<void> {
   const marketplaceId = process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB'
   const deliveryPostalCode = process.env.EBAY_DELIVERY_POSTCODE?.trim() || undefined
   const outputPath = path.resolve('public/data/laptop-listings.json')
+  const historyPath = path.resolve('data/laptop-first-seen.json')
+  let firstSeen: FirstSeenHistory = {}
+  try {
+    firstSeen = (JSON.parse(await readFile(historyPath, 'utf8')) as { firstSeen: FirstSeenHistory }).firstSeen
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   let previousDataset: LaptopDataset | null = null
   try {
     previousDataset = upgradeLegacyCache(JSON.parse(await readFile(outputPath, 'utf8')) as unknown)
@@ -228,7 +236,7 @@ async function main(): Promise<void> {
     .map(normalizeEbayItem)
     .map((raw) => enrichListing(raw))
     .filter((listing) => listing.price > 0 && listing.price <= 3000 && (listing.deliveredPrice == null || listing.deliveredPrice <= 3000))
-    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))), collectedAt)
+    .sort((a, b) => (b.recommendationScore - a.recommendationScore) || ((a.deliveredPrice ?? Number.POSITIVE_INFINITY) - (b.deliveredPrice ?? Number.POSITIVE_INFINITY))), collectedAt, firstSeen)
 
   // Last line of defence, whatever emptied the results upstream.
   if (listings.length === 0) {
@@ -251,6 +259,7 @@ async function main(): Promise<void> {
     listings,
   }
   await writeJsonAtomic(outputPath, dataset)
+  await writeJsonAtomic(historyPath, { schemaVersion: 1, firstSeen: updateFirstSeenHistory(firstSeen, listings) })
   console.log(`Saved ${dataset.listingCount} live eBay GB laptops (${dataset.scoredCount} scored, ${dataset.needsCheckingCount} need checking).`)
   console.log(`Dataset: ${outputPath}`)
 }

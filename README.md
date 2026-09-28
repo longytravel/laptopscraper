@@ -27,6 +27,16 @@ The price / work-performance scatter chart is the whole page. Filters and the li
 
 The best-buy line joins only machines faster than everything cheaper, one line per RAM tier.
 
+### Live check
+
+The dataset is a twice-daily snapshot, and GitHub often starts those runs hours late, so a laptop can sell long before the next refresh. When the dashboard opens it asks `/api/listing-status` (a Vercel function) about every listing that could be plotted, a few at a time, and removes the ones eBay says have ended. The note above the chart says how many were removed; the panel under the chart shows when the selected laptop was last confirmed live and its current price if it has changed. The function needs `EBAY_CLIENT_ID` and `EBAY_CLIENT_SECRET` in the Vercel project's environment variables; without them the note says the live check is unavailable. Each uncached lookup spends one call from the same 5,000/day Browse quota the collector uses, so answers are cached at Vercel's edge (live for 30 minutes, ended for a day).
+
+An ended listing can still report `IN_STOCK`; the item's end date decides it.
+
+### First seen
+
+`data/laptop-first-seen.json` records the first time any run saw each item ID. eBay's search results fluctuate, and a listing missing from one run used to come back with a fresh first-seen time: a false NEW badge and a repeat Telegram announcement. The Telegram seen list is cumulative for the same reason.
+
 ## Backtesting work score
 
 All comparisons use the G16 as `100`:

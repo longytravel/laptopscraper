@@ -64,7 +64,9 @@ export async function runLaptopAlerts(args = process.argv.slice(2)): Promise<voi
   });
   await writeState({
     schemaVersion: 1,
-    seenEligibleIds: digest.currentEligibleIds,
+    // Cumulative: a listing that drops out of one run's search results and
+    // returns must not be announced as new again.
+    seenEligibleIds: [...new Set([...state.seenEligibleIds, ...digest.currentEligibleIds])].sort(),
     lastSnapshotHash: digest.snapshotHash,
     lastSentAt: new Date().toISOString(),
     lastMessageId: messageId,

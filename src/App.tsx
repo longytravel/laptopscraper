@@ -43,6 +43,15 @@ import { assessBestBuy, effectivePrice, RAM_TIERS, RAM_UPGRADE_GBP } from './lap
 import type { GateOptions, RamTier } from './laptop/best-buy'
 import type { ChartListing } from './laptop/dashboard'
 import type { LaptopDataset, LaptopFilters, LaptopListing, SpecConfidence } from './laptop/types'
+import { checkListings, fetchListingStatus } from './laptop/live-status'
+import type { LiveStatus } from './laptop/live-status'
+
+type LiveCheck = { phase: 'checking' | 'done' | 'unavailable'; checked: number; total: number; ended: number }
+
+function LiveBadge({ status, capturedAt }: { status: LiveStatus | undefined; capturedAt: string }) {
+  if (status?.state === 'live') return <span className="live-badge is-live"><Check size={12} aria-hidden="true" />Live on eBay · checked {ageLabel(status.checkedAt)}</span>
+  return <span className="live-badge">Not checked live · listed at the {new Date(capturedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} refresh</span>
+}
 
 const MONEY = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 })
 const NUMBER = new Intl.NumberFormat('en-GB')
@@ -166,10 +175,14 @@ function PowerChart({
   model,
   selectedId,
   onSelect,
+  live,
+  capturedAt,
 }: {
   model: ChartModel
   selectedId: string | null
   onSelect: (row: LaptopListing) => void
+  live: Map<string, LiveStatus>
+  capturedAt: string
 }) {
   const clipId = useId().replace(/:/g, '')
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -304,8 +317,8 @@ function PowerChart({
       <div className="chart-selection" aria-live="polite">
         {selected ? (
           <>
-            <div><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel} · {selected.ramGb} GB · {selected.condition}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected, { minRamGb: selected.ramTier })}</small></div>
-            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
+            <div><LiveBadge status={live.get(selected.id)} capturedAt={capturedAt} /><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel} · {selected.ramGb} GB · {selected.condition}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected, { minRamGb: selected.ramTier })}</small></div>
+            <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{(() => { const now = live.get(selected.id)?.price; return now != null && Math.abs(now - selected.plottedPrice) >= 1 ? <span className="upgrade-total">now {MONEY.format(now)} on eBay</span> : null })()}{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
             <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
           </>
         ) : <span>Focus or hover a point to inspect it.</span>}
@@ -409,6 +422,8 @@ function App() {
   const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
   const [tiers, setTiers] = useState<Set<RamTier>>(loadTiers)
   const [drawer, setDrawer] = useState<DrawerName | null>(null)
+  const [live, setLive] = useState<Map<string, LiveStatus>>(() => new Map())
+  const [liveCheck, setLiveCheck] = useState<LiveCheck | null>(null)
   const drawerTrigger = useRef<HTMLElement | null>(null)
   const openDrawer = (name: DrawerName) => {
     drawerTrigger.current = document.activeElement as HTMLElement | null
@@ -447,7 +462,39 @@ function App() {
   }, [tiers])
 
   const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
-  const groups = useMemo(() => partitionResults(dataset?.listings ?? [], filters, query), [dataset, filters, query])
+  // Every listing that can be plotted at either RAM tier gets a live check
+  // when the page opens; ended ones leave the chart and the lists.
+  const liveIds = useMemo(
+    () => (dataset?.listings ?? []).filter((row) => assessBestBuy(row, { minRamGb: 32 }).eligible).map((row) => row.id),
+    [dataset],
+  )
+  useEffect(() => {
+    if (!liveIds.length) return
+    const ids = liveIds
+    let cancelled = false
+    let checked = 0
+    let ended = 0
+    const found = new Map<string, LiveStatus>()
+    checkListings(ids, fetchListingStatus, (batch) => {
+      if (cancelled) return
+      for (const status of batch) {
+        found.set(status.id, status)
+        if (status.state === 'ended') ended += 1
+      }
+      checked += batch.length
+      setLive(new Map(found))
+      setLiveCheck({ phase: 'checking', checked, total: ids.length, ended })
+    }).then((outcome) => {
+      if (!cancelled) setLiveCheck({ phase: outcome, checked, total: ids.length, ended })
+    })
+    return () => { cancelled = true }
+  }, [liveIds])
+
+  const liveListings = useMemo(
+    () => (dataset?.listings ?? []).filter((row) => live.get(row.id)?.state !== 'ended'),
+    [dataset, live],
+  )
+  const groups = useMemo(() => partitionResults(liveListings, filters, query), [liveListings, filters, query])
   const filtered = groups.matches
   const ram32 = groups.ram32Matches
   const newMatches = groups.newMatches
@@ -522,6 +569,9 @@ function App() {
     return <main className="load-state"><span className="loader" /><h1>Loading current eBay laptops</h1><p>Preparing power and price comparisons…</p></main>
   }
 
+  // Until the first batch lands, the check is simply starting.
+  const liveNote: LiveCheck = liveCheck ?? { phase: 'checking', checked: 0, total: liveIds.length, ended: 0 }
+
   const tabs: Array<[ResultMode, string, number]> = [
     ['new', 'New', newMatches.length],
     ['matches', '64 GB', filtered.length],
@@ -557,7 +607,13 @@ function App() {
             </div>
           </div>
           {tiers.has(32) && <p className="tier-note"><MemoryStick size={14} aria-hidden="true" />Hollow dots have 32 GB and pass every other floor. A 64 GB kit costs about {MONEY.format(RAM_UPGRADE_GBP)} today; tap a dot for the total.</p>}
-          <PowerChart model={chart} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} />
+          <p className={`live-note phase-${liveNote.phase}`}>
+            <span className="live-dot" aria-hidden="true" />
+            {liveNote.phase === 'checking' && <>Checking each laptop is still for sale on eBay… {liveNote.checked} of {liveNote.total}{liveNote.ended > 0 && ` · ${liveNote.ended} sold or ended, removed`}</>}
+            {liveNote.phase === 'done' && <>Every dot checked live on eBay just now{liveNote.ended > 0 ? ` · ${liveNote.ended} sold or ended since the ${new Date(dataset.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} refresh, removed` : ' · all still for sale'}</>}
+            {liveNote.phase === 'unavailable' && <>Live check unavailable — showing the snapshot from {ageLabel(dataset.generatedAt)}, so a dot may have sold since</>}
+          </p>
+          <PowerChart model={chart} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} live={live} capturedAt={dataset.generatedAt} />
         </section>
       </main>
 
