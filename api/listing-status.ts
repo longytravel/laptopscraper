@@ -7,6 +7,12 @@ import type { LiveStatus } from '../src/laptop/live-status'
 // and EBAY_CLIENT_SECRET in the Vercel project's environment variables. Each
 // uncached call spends one Browse API call from the 5,000/day quota the
 // collector also uses, so answers are cached at Vercel's edge per listing.
+//
+// Do NOT add ?fieldgroups=COMPACT to the getItem call. For private (INDIVIDUAL)
+// sellers on EBAY_GB the COMPACT price omits eBay's Buyer Protection fee
+// (GBP 0.70 + 4% of the first 300 + 2% of 300-4,000) while the full response and
+// the search API the collector uses include it, and it is the fee-inclusive
+// figure the buyer sees. Item v1|168726929430|0: COMPACT 2000.00, full 2046.70.
 
 interface EbayItemBody {
   itemEndDate?: string
@@ -68,7 +74,7 @@ export async function GET(request: Request): Promise<Response> {
 
   const checkedAt = new Date().toISOString()
   try {
-    const response = await fetch(`https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(id)}?fieldgroups=COMPACT`, {
+    const response = await fetch(`https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(id)}`, {
       headers: {
         Authorization: `Bearer ${await appToken(clientId, clientSecret)}`,
         'X-EBAY-C-MARKETPLACE-ID': process.env.EBAY_MARKETPLACE_ID || 'EBAY_GB',

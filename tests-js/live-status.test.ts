@@ -21,6 +21,24 @@ test('live, gone, out of stock and failed lookups are told apart', () => {
   assert.equal(classifyItemResponse(500, null, now).state, 'unknown')
 })
 
+test('the price passes through untouched: it must be the full-response, fee-inclusive figure', () => {
+  // Fee trap: getItem?fieldgroups=COMPACT returned 2000.00 for this private-seller
+  // listing (no Buyer Protection fee); the full response and search say 2046.70,
+  // which is what the buyer pays. The function must request the full item, and
+  // classifyItemResponse must not adjust the price it is given (so it stays equal
+  // to the collector's search price and no false "reduced from" appears).
+  const full = { price: { value: '2046.70' }, estimatedAvailabilities: [{ estimatedAvailabilityStatus: 'IN_STOCK' }] }
+  assert.deepEqual(classifyItemResponse(200, full, now), { state: 'live', price: 2046.7 })
+  assert.equal(classifyItemResponse(200, { price: { value: '0.00' } }, now).price, 0)
+  assert.equal(classifyItemResponse(200, {}, now).price, undefined)
+})
+
+test('the function asks eBay for the full item, never COMPACT', async () => {
+  const { readFileSync } = await import('node:fs')
+  const source = readFileSync(new URL('../api/listing-status.ts', import.meta.url), 'utf8')
+  assert.ok(!/fieldgroups\s*=\s*COMPACT/.test(source.replace(/\/\/.*$/gm, '')), 'COMPACT drops the buyer protection fee from the price of private sellers')
+})
+
 test('checks every listing, and stops at the first sign the endpoint is unavailable', async () => {
   const seen: LiveStatus[] = []
   const status = (id: string): LiveStatus => ({ id, state: 'live', checkedAt: now.toISOString() })

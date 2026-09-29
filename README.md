@@ -33,6 +33,8 @@ The dataset is a twice-daily snapshot, and GitHub often starts those runs hours 
 
 An ended listing can still report `IN_STOCK`; the item's end date decides it.
 
+Fee trap: the function must fetch the full item, not `?fieldgroups=COMPACT`. For private sellers the COMPACT price leaves out eBay's Buyer Protection fee (£0.70 + 4% of the first £300 + 2% of £300 to £4,000), so every such dot sat about 2.3% low and was wrongly labelled "reduced". The full response matches the search API and the price on the eBay page.
+
 ### First seen
 
 `data/laptop-first-seen.json` records the first time any run saw each item ID. eBay's search results fluctuate, and a listing missing from one run used to come back with a fresh first-seen time: a false NEW badge and a repeat Telegram announcement. The Telegram seen list is cumulative for the same reason.
