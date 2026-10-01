@@ -9,9 +9,13 @@ import {
   chartPrice,
   classifyReadiness,
   deriveFacets,
+  markSeen,
+  parseSeen,
   parseShortlist,
   partitionResults,
   rankListings,
+  SEEN_LIMIT,
+  serializeSeen,
   serializeShortlist,
   toggleSelection,
 } from '../src/laptop/dashboard.ts'
@@ -48,6 +52,31 @@ test('shortlist storage round-trips, rejects malformed input and toggles immutab
   assert.deepEqual(parseShortlist('[1, null]'), new Set())
   assert.deepEqual(original, new Set(['one']))
   assert.deepEqual(toggleSelection(added, 'one'), new Set(['two']))
+})
+
+test('opened-dot memory round-trips in order, rejects malformed input and never mutates', () => {
+  const none = new Set<string>()
+  const one = markSeen(none, 'b')
+  const two = markSeen(one, 'a')
+
+  assert.equal(none.size, 0)
+  assert.deepEqual([...two], ['b', 'a'])
+  assert.deepEqual([...parseSeen(serializeSeen(two))], ['b', 'a'])
+  assert.equal(markSeen(two, 'a'), two, 'reopening a dot leaves the same set so React skips the render')
+  assert.deepEqual(parseSeen(null), new Set())
+  assert.deepEqual(parseSeen('{broken'), new Set())
+  assert.deepEqual(parseSeen('[1, null]'), new Set())
+})
+
+test('opened-dot memory is capped and drops the oldest first', () => {
+  let ids = new Set<string>()
+  for (let index = 0; index < SEEN_LIMIT + 5; index += 1) ids = markSeen(ids, `id-${index}`)
+
+  assert.equal(ids.size, SEEN_LIMIT)
+  assert.equal(ids.has('id-0'), false)
+  assert.equal(ids.has('id-4'), false)
+  assert.equal(ids.has('id-5'), true)
+  assert.equal(ids.has(`id-${SEEN_LIMIT + 4}`), true)
 })
 
 test('derives stable condition, brand, CPU and GPU facet options', () => {

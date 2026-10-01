@@ -22,10 +22,32 @@ Listings with missing or conflicting evidence stay in the separate **Needs info*
 
 The price / work-performance scatter chart is the whole page. Filters and the listing cards open in drawers from the header. Two buttons above the chart, **64 GB** and **32 GB**, choose what is plotted, and both can be on:
 
-- **64 GB** (solid dots) are the recommendations described above.
-- **32 GB** (hollow dots) have 32 to 63 GB RAM and pass every other floor. Tapping one shows its advertised price and the total with a 64 GB kit, costed at 64 GB × the RAM street price (£416), because both sticks are replaced. Strix Halo and Lunar Lake machines are marked as soldered. These are never sent to Telegram.
+- **64 GB** (circles) are the recommendations described above.
+- **32 GB** (diamonds) have 32 to 63 GB RAM and pass every other floor. Tapping one shows its advertised price and the total with a 64 GB kit, costed at 64 GB × the RAM street price (£416), because both sticks are replaced. Strix Halo and Lunar Lake machines are marked as soldered. These are never sent to Telegram.
 
-The best-buy line joins only machines faster than everything cheaper, one line per RAM tier.
+The best-buy line joins only machines faster than everything cheaper, one line per RAM tier (solid green for 64 GB, dashed violet for 32 GB). The dots on a line carry a ring in the same colour.
+
+### Reading the chart
+
+Each channel carries one thing, and the key under the chart is drawn from the same marks as the plot so it cannot drift:
+
+- **Shape and hue are RAM:** blue circle for 64 GB, violet diamond for 32 GB.
+- **Fill is whether you have clicked it.** A solid dot is new to you; a pale dot with a ring is one you have clicked, tapped, reached with Enter or Space, or followed to eBay. Hovering only previews a dot and never marks it. The key counts how many plotted dots you have clicked and can clear the marks. They are remembered in this browser (`laptop-power-finder-opened-v1`, newest 2,000 listing IDs), so on a return visit the solid dots are what has appeared since you last looked.
+- **Size is constant.** Dots used to grow with an unlabelled recommendation score, which the key never explained and which made RAM tiers harder to compare.
+- **Rings** mark the best buys; an orange halo marks the dot whose details are shown below the chart.
+- **Dashed lines** are your G16: the horizontal one is its work performance (100), the vertical one its £1,170 price, and the diagonal is every point with the same work per pound. Above the diagonal is better value for money than the G16.
+
+Dots are not coloured by value. They used to be, in three bands measured against the G16, but the G16 at £1,170 is a bargain nothing on eBay beats, so every dot fell into the lowest band and the chart was a wall of grey. Position already shows value, and the value text in the readout still says how far each dot sits below or above the G16.
+
+### Zoom
+
+The chart zooms up to 16× on both axes together, so dots never stretch and crowded rows (many machines share a work score) can be pulled apart.
+
+- Mouse wheel or trackpad pinch zooms around the pointer. At full view only a zoom-in is captured, so scrolling the page past the chart still works.
+- Drag pans once zoomed. Double-click zooms in 2× at that spot.
+- Touch: pinch to zoom, one finger to pan while zoomed. At full view a one-finger swipe still scrolls the page.
+- Buttons above the chart zoom in and out, show the current level and reset the view. With the chart focused, `+`, `−` and `0` do the same.
+- Tabbing to a dot outside the zoomed window brings it into view.
 
 ### Live check
 

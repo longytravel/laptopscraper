@@ -10,6 +10,7 @@ import {
   Gauge,
   Heart,
   Laptop,
+  Maximize2,
   MemoryStick,
   RefreshCw,
   RotateCcw,
@@ -20,6 +21,8 @@ import {
   TriangleAlert,
   X,
   Zap,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react'
 
 import './App.css'
@@ -31,13 +34,30 @@ import {
   chartPrice,
   classifyReadiness,
   deriveFacets,
+  markSeen,
+  parseSeen,
   parseShortlist,
   partitionResults,
   rankListings,
+  SEEN_STORAGE_KEY,
+  serializeSeen,
   serializeShortlist,
   SHORTLIST_STORAGE_KEY,
   toggleSelection,
 } from './laptop/dashboard'
+import {
+  centreOn,
+  FULL_VIEW,
+  isZoomed,
+  MIN_SPAN,
+  niceTicks,
+  pointInView,
+  viewAnchoredAt,
+  viewContains,
+  zoomLevel,
+  zoomView,
+} from './laptop/chart-view'
+import type { ChartView } from './laptop/chart-view'
 import { createDefaultFilters } from './laptop/engine'
 import { assessBestBuy, effectivePrice, RAM_TIERS, RAM_UPGRADE_GBP } from './laptop/best-buy'
 import type { GateOptions, RamTier } from './laptop/best-buy'
@@ -172,21 +192,95 @@ function Drawer({ open, side, title, onClose, children }: { open: boolean; side:
 
 type ChartModel = ReturnType<typeof buildChartModel>
 
+/** The axis runs a little past the £3,000 ceiling so the dearest dots are not clipped by the frame. */
+const PRICE_MAX = 3100
+/** Work performance per pound on the line where value equals the G16's. */
+const EQUAL_VALUE_SLOPE = 100 / BASELINE_PRICE
+const BUTTON_ZOOM = 1.6
+/** Half-diagonal over circle radius that gives a diamond the same area as the circle. */
+const DIAMOND_SCALE = 1.25
+
+/**
+ * One mark for both the plot and the key, so the key can never drift from the
+ * chart. Shape says RAM (circle 64 GB, diamond 32 GB); fill says whether you
+ * have opened the listing yet.
+ */
+function Marker({ tier, x, y, r, opened, extra = '' }: { tier: RamTier; x: number; y: number; r: number; opened: boolean; extra?: string }) {
+  const className = `listing-point tier-${tier} ${opened ? 'is-opened' : 'is-new'}${extra}`
+  if (tier === 32) {
+    const d = r * DIAMOND_SCALE
+    return <path className={className} d={`M ${x} ${y - d} L ${x + d} ${y} L ${x} ${y + d} L ${x - d} ${y} Z`} />
+  }
+  return <circle className={className} cx={x} cy={y} r={r} />
+}
+function KeyMark({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+  return <svg className={`key-mark${wide ? ' is-wide' : ''}`} viewBox={wide ? '0 0 34 24' : '0 0 24 24'} aria-hidden="true">{children}</svg>
+}
+
+function ChartKey({ model, opened, onClear }: { model: ChartModel; opened: number; onClear: () => void }) {
+  const total = model.points.length
+  return (
+    <div className="chart-key" role="group" aria-label="Chart key">
+      <div className="key-group">
+        <span className="key-title">Status</span>
+        <span className="key-item"><KeyMark><Marker tier={64} x={12} y={12} r={6} opened={false} /></KeyMark>Not clicked yet</span>
+        <span className="key-item"><KeyMark><Marker tier={64} x={12} y={12} r={6} opened /></KeyMark>Clicked</span>
+      </div>
+      <div className="key-group">
+        <span className="key-title">RAM</span>
+        {model.ram64Count > 0 && <span className="key-item"><KeyMark><Marker tier={64} x={12} y={12} r={6} opened={false} /></KeyMark>64 GB</span>}
+        {model.ram32Count > 0 && <span className="key-item"><KeyMark><Marker tier={32} x={12} y={12} r={6} opened={false} /></KeyMark>32 GB</span>}
+      </div>
+      <div className="key-group">
+        <span className="key-title">Best buy</span>
+        <span className="key-item">
+          <KeyMark wide>
+            <line className="pareto-line" x1="1" x2="33" y1="12" y2="12" />
+            <circle className="halo-frontier" cx="17" cy="12" r="9.5" />
+            <Marker tier={64} x={17} y={12} r={6} opened={false} />
+          </KeyMark>
+          Beats everything cheaper
+        </span>
+      </div>
+      <div className="key-group">
+        <span className="key-title">Your G16</span>
+        <span className="key-item"><KeyMark wide><line className="baseline-line" x1="1" x2="33" y1="12" y2="12" /></KeyMark>£1,170 · 100</span>
+        <span className="key-item"><KeyMark wide><line className="equal-value-line" x1="1" x2="33" y1="20" y2="4" /></KeyMark>Equal value (above = better)</span>
+      </div>
+      <div className="key-progress">
+        <span><strong>{opened}</strong> of {total} clicked</span>
+        {opened > 0 && <button type="button" onClick={onClear}>Mark all as not clicked</button>}
+      </div>
+    </div>
+  )
+}
+
+type Gesture =
+  | { kind: 'drag'; startX: number; startY: number; gx: number; gy: number; span: number; moved: boolean }
+  | { kind: 'pinch'; startDistance: number; gx: number; gy: number; span: number }
+
 function PowerChart({
   model,
   selectedId,
   onSelect,
+  onOpen,
+  openedIds,
+  onClearOpened,
   live,
   capturedAt,
 }: {
   model: ChartModel
   selectedId: string | null
   onSelect: (row: LaptopListing) => void
+  onOpen: (id: string) => void
+  openedIds: Set<string>
+  onClearOpened: () => void
   live: Map<string, LiveStatus>
   capturedAt: string
 }) {
   const clipId = useId().replace(/:/g, '')
   const wrapRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
   // First guess from the window so a phone never paints the desktop layout;
   // the observer then tracks the real container width.
   const [measured, setMeasured] = useState(() => window.innerWidth - 36)
@@ -208,15 +302,132 @@ function PowerChart({
   const pad = compact ? { top: 20, right: 14, bottom: 46, left: 44 } : { top: 34, right: 34, bottom: 56, left: 64 }
   const innerWidth = width - pad.left - pad.right
   const innerHeight = height - pad.top - pad.bottom
-  const x = (price: number) => pad.left + (price / 3000) * innerWidth
-  const y = (power: number) => pad.top + (1 - (power - model.yDomain[0]) / (model.yDomain[1] - model.yDomain[0])) * innerHeight
-  // Clamped so a much faster machine widening the y-axis can never push the
-  // label off the bottom of the plot.
-  const baselineLabelY = Math.min(y(100) + 10, pad.top + innerHeight - 30)
-  const xTicks = compact ? [0, 1000, 2000, 3000] : [0, 500, 1000, 1500, 2000, 2500, 3000]
-  const yStep = Math.max(10, Math.ceil((model.yDomain[1] - model.yDomain[0]) / 6 / 10) * 10)
-  const yTicks: number[] = []
-  for (let value = Math.ceil(model.yDomain[0] / yStep) * yStep; value <= model.yDomain[1]; value += yStep) yTicks.push(value)
+  const radius = compact ? 5.5 : 6.5
+
+  // Zoom and pan. The view is a window over the full chart; the handlers read
+  // geometry and view through refs so they never act on a stale render.
+  const [view, setView] = useState<ChartView>(FULL_VIEW)
+  const [panning, setPanning] = useState(false)
+  const viewRef = useRef<ChartView>(FULL_VIEW)
+  const geometry = useRef({ width, padLeft: pad.left, padTop: pad.top, innerWidth, innerHeight })
+  useEffect(() => {
+    viewRef.current = view
+    geometry.current = { width, padLeft: pad.left, padTop: pad.top, innerWidth, innerHeight }
+  })
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const gesture = useRef<Gesture | null>(null)
+  const justPanned = useRef(false)
+
+  const apply = useCallback((next: ChartView) => {
+    viewRef.current = next
+    setView(next)
+  }, [])
+  /** A screen position as a relative position in the plot, 0..1 from the left and from the bottom. */
+  const toPlot = useCallback((clientX: number, clientY: number) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    const g = geometry.current
+    if (!rect || !rect.width) return { rx: 0.5, ry: 0.5 }
+    const scale = g.width / rect.width
+    return { rx: ((clientX - rect.left) * scale - g.padLeft) / g.innerWidth, ry: 1 - ((clientY - rect.top) * scale - g.padTop) / g.innerHeight }
+  }, [])
+  const zoomBy = useCallback((factor: number) => apply(zoomView(viewRef.current, factor)), [apply])
+  const hasPoints = model.points.length > 0
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    // Needs a native, non-passive listener so the page does not scroll as well.
+    const onWheel = (event: WheelEvent) => {
+      const current = viewRef.current
+      const unit = event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? 400 : 1
+      const factor = Math.exp(-event.deltaY * unit * (event.ctrlKey ? 0.01 : 0.002))
+      // At full view only a zoom-in is taken, so scrolling down the page past the chart still works.
+      if (factor === 1 || (factor < 1 && !isZoomed(current))) return
+      event.preventDefault()
+      const { rx, ry } = toPlot(event.clientX, event.clientY)
+      apply(zoomView(current, factor, Math.min(1, Math.max(0, rx)), Math.min(1, Math.max(0, ry))))
+    }
+    svg.addEventListener('wheel', onWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', onWheel)
+  }, [hasPoints, apply, toPlot])
+
+  function beginGesture(event: React.PointerEvent<SVGSVGElement>) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    const current = viewRef.current
+    const touches = [...pointers.current.values()]
+    if (touches.length === 1) {
+      const { rx, ry } = toPlot(event.clientX, event.clientY)
+      const { gx, gy } = pointInView(current, rx, ry)
+      gesture.current = { kind: 'drag', startX: event.clientX, startY: event.clientY, gx, gy, span: current.span, moved: false }
+    } else if (touches.length === 2) {
+      const [a, b] = touches
+      const { rx, ry } = toPlot((a.x + b.x) / 2, (a.y + b.y) / 2)
+      const { gx, gy } = pointInView(current, rx, ry)
+      gesture.current = { kind: 'pinch', startDistance: Math.hypot(a.x - b.x, a.y - b.y) || 1, gx, gy, span: current.span }
+      for (const id of pointers.current.keys()) svgRef.current?.setPointerCapture(id)
+      setPanning(true)
+    }
+  }
+
+  function moveGesture(event: React.PointerEvent<SVGSVGElement>) {
+    const known = pointers.current.get(event.pointerId)
+    const active = gesture.current
+    if (!known || !active) return
+    known.x = event.clientX
+    known.y = event.clientY
+    if (active.kind === 'drag') {
+      if (!active.moved) {
+        // Nothing to pan at full view, and a still pointer is a click: leave both to the dots.
+        if (!isZoomed(viewRef.current) || Math.hypot(event.clientX - active.startX, event.clientY - active.startY) < 5) return
+        active.moved = true
+        svgRef.current?.setPointerCapture(event.pointerId)
+        setPanning(true)
+      }
+      const { rx, ry } = toPlot(event.clientX, event.clientY)
+      apply(viewAnchoredAt(active.span, active.gx, active.gy, rx, ry))
+    } else {
+      const [a, b] = [...pointers.current.values()]
+      const spread = Math.hypot(a.x - b.x, a.y - b.y) / active.startDistance
+      const { rx, ry } = toPlot((a.x + b.x) / 2, (a.y + b.y) / 2)
+      apply(viewAnchoredAt(active.span / spread, active.gx, active.gy, rx, ry))
+    }
+  }
+
+  function endGesture(event: React.PointerEvent<SVGSVGElement>) {
+    if (!pointers.current.delete(event.pointerId)) return
+    const ended = gesture.current
+    if (ended && (ended.kind === 'pinch' || ended.moved)) {
+      // The click that follows a drag or pinch belongs to the gesture, not to a dot underneath.
+      justPanned.current = true
+      setTimeout(() => { justPanned.current = false }, 0)
+    }
+    if (svgRef.current?.hasPointerCapture(event.pointerId)) svgRef.current.releasePointerCapture(event.pointerId)
+    const remaining = [...pointers.current.values()]
+    if (remaining.length === 1 && ended?.kind === 'pinch') {
+      // One finger left after a pinch carries on as a pan.
+      const current = viewRef.current
+      const { rx, ry } = toPlot(remaining[0].x, remaining[0].y)
+      const { gx, gy } = pointInView(current, rx, ry)
+      gesture.current = { kind: 'drag', startX: remaining[0].x, startY: remaining[0].y, gx, gy, span: current.span, moved: true }
+    } else if (remaining.length === 0) {
+      gesture.current = null
+      setPanning(false)
+    }
+  }
+
+  const [yLow, yHigh] = model.yDomain
+  const left = view.cx - view.span / 2
+  const bottom = view.cy - view.span / 2
+  const xMin = left * PRICE_MAX
+  const xMax = (left + view.span) * PRICE_MAX
+  const yMin = yLow + bottom * (yHigh - yLow)
+  const yMax = yLow + (bottom + view.span) * (yHigh - yLow)
+  const x = (price: number) => pad.left + ((price - xMin) / (xMax - xMin)) * innerWidth
+  const y = (power: number) => pad.top + (1 - (power - yMin) / (yMax - yMin)) * innerHeight
+  const xAxis = niceTicks(xMin, xMax, compact ? 4 : 7, 10)
+  const yAxis = niceTicks(yMin, yMax, compact ? 5 : 6, 1)
+  const priceTick = (tick: number) => (tick === 0 ? '£0' : xAxis.step >= 500 ? `£${tick / 1000}k` : `£${NUMBER.format(tick)}`)
   // The line joins only machines faster than everything cheaper. Frontier dots
   // that earn their place on RAM or storage stay highlighted but off the line,
   // which would otherwise zigzag.
@@ -228,101 +439,177 @@ function PowerChart({
   }
   const frontierPath = pathFor(model.frontier)
   const frontier32Path = pathFor(model.frontier32)
-  const equalValuePowerAtMax = (3000 / BASELINE_PRICE) * 100
-  const equalValuePath = `M ${x(0)} ${y(0)} L ${x(3000)} ${y(equalValuePowerAtMax)}`
-  const valueLabelPower = Math.min(model.yDomain[1] - 5, Math.max(model.yDomain[0] + 8, (2020 / BASELINE_PRICE) * 100 + 18))
+  const equalValuePath = `M ${x(0)} ${y(0)} L ${x(PRICE_MAX)} ${y(PRICE_MAX * EQUAL_VALUE_SLOPE)}`
+  // Frontier dots are drawn last so they are never buried; the order is fixed,
+  // so opening a dot never reorders the DOM and drops keyboard focus.
+  const drawOrder = useMemo(
+    () => [...model.points].sort((a, b) => Number(model.frontierIds.has(a.id)) - Number(model.frontierIds.has(b.id))),
+    [model],
+  )
   const selected = model.points.find((point) => point.id === selectedId) ?? null
 
-  function activate(point: ChartListing) {
+  // The "better value" label rides the visible part of the equal-value line, at its slope.
+  const lineLabel = (() => {
+    const text = compact ? 'BETTER VALUE ↑' : 'BETTER VALUE THAN YOUR G16 ↑'
+    const from = Math.max(xMin, yMin / EQUAL_VALUE_SLOPE)
+    const to = Math.min(xMax, yMax / EQUAL_VALUE_SLOPE)
+    if (to <= from) return null
+    const ax = x(from)
+    const ay = y(from * EQUAL_VALUE_SLOPE)
+    const bx = x(to)
+    const by = y(to * EQUAL_VALUE_SLOPE)
+    const length = Math.hypot(bx - ax, by - ay)
+    const needed = text.length * 6.4
+    // Toward the top of the visible line, where there is least data; centred if the line is short.
+    const along = Math.min(0.8, 1 - (needed / 2 + 12) / length)
+    if (along < 0.5) return null
+    return { text, cx: ax + (bx - ax) * along, cy: ay + (by - ay) * along, angle: (Math.atan2(by - ay, bx - ax) * 180) / Math.PI }
+  })()
+  const baselineLabelWidth = compact ? 118 : 173
+  const baselineLabelX = x(BASELINE_PRICE) + 8
+  const baselineLabelY = Math.min(y(100) + 10, pad.top + innerHeight - 30)
+  const showBaselineLabel = y(100) > pad.top && y(100) < pad.top + innerHeight - 4
+    && baselineLabelX > pad.left && baselineLabelX + baselineLabelWidth < width - pad.right
+
+  function open(point: ChartListing) {
     onSelect(point)
+    onOpen(point.id)
   }
 
+  /** Keyboard focus can land on a dot outside the zoomed window; bring it in. */
+  function reveal(point: ChartListing) {
+    const gx = point.plottedPrice / PRICE_MAX
+    const gy = (point.plottedPower - yLow) / (yHigh - yLow)
+    if (!viewContains(viewRef.current, gx, gy, 0.04)) apply(centreOn(viewRef.current, gx, gy))
+  }
+
+  function handleKeys(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.ctrlKey || event.metaKey || event.altKey) return
+    if (event.key === '+' || event.key === '=') zoomBy(BUTTON_ZOOM)
+    else if (event.key === '-' || event.key === '_') zoomBy(1 / BUTTON_ZOOM)
+    else if (event.key === '0') apply(FULL_VIEW)
+  }
+
+  const zoomed = isZoomed(view)
+  const openedPlotted = model.points.filter((point) => openedIds.has(point.id)).length
+
   return (
-    <div className="chart-wrap" ref={wrapRef}>
-      {model.points.length === 0 ? (
+    <div className="chart-wrap" ref={wrapRef} onKeyDown={handleKeys}>
+      {!hasPoints ? (
         <div className="chart-empty">
           <Filter size={28} aria-hidden="true" />
           <strong>No laptops match these filters</strong>
           <span>Switch on the other RAM tier, loosen a filter, or reset the controls.</span>
         </div>
       ) : (
-        <svg className="power-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`${clipId}-title ${clipId}-desc`}>
-          <title id={`${clipId}-title`}>Advertised price versus backtesting work performance</title>
-          <desc id={`${clipId}-desc`}>{model.points.length} qualifying eBay listings compared with the current ASUS G16 at work performance 100 and £1,170.</desc>
-          <defs>
-            <clipPath id={clipId}><rect x={pad.left} y={pad.top} width={innerWidth} height={innerHeight} /></clipPath>
-          </defs>
-          <g className="chart-grid" aria-hidden="true">
-            {xTicks.map((tick) => <line key={`x-${tick}`} x1={x(tick)} x2={x(tick)} y1={pad.top} y2={height - pad.bottom} />)}
-            {yTicks.map((tick) => <line key={`y-${tick}`} x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} />)}
-          </g>
-          <g className="chart-axes" aria-hidden="true">
-            {xTicks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{tick === 0 ? '£0' : `£${tick / 1000}k`}</text>)}
-            {yTicks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
-            <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">ADVERTISED PRICE</text>
-            <text transform={`translate(${compact ? 11 : 17} ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">{compact ? 'WORK PERFORMANCE' : 'BACKTESTING WORK PERFORMANCE'}</text>
-          </g>
-          <g clipPath={`url(#${clipId})`}>
-            <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
-            <line className="baseline-price" x1={x(BASELINE_PRICE)} x2={x(BASELINE_PRICE)} y1={pad.top} y2={height - pad.bottom} />
-            <path className="equal-value-line" d={equalValuePath} />
-            <text className="value-region-label" x={x(2020)} y={y(valueLabelPower)}>{compact ? 'BETTER VALUE ↑' : 'BETTER VALUE THAN YOUR G16 ↑'}</text>
-            {frontier32Path && <path className="pareto-line tier-32" d={frontier32Path} />}
-            {frontierPath && <path className="pareto-line" d={frontierPath} />}
-            {model.points.map((point) => {
-              const isSelected = point.id === selectedId
-              const isFrontier = model.frontierIds.has(point.id)
-              const value = assessValue(point.plottedPower, point.valuePrice)
-              const radius = (compact ? 4 : 5) + Math.max(0, Math.min(compact ? 3 : 4, point.recommendationScore / 25))
-              return (
-                <circle
-                  key={point.id}
-                  className={`listing-point value-${value.band} tier-${point.ramTier}${isFrontier ? ' is-frontier' : ''}${isSelected ? ' is-selected' : ''}`}
-                  cx={x(point.plottedPrice)}
-                  cy={y(point.plottedPower)}
-                  r={radius}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`${point.title}, ${point.ramGb} GB, ${MONEY.format(point.plottedPrice)} advertised, work performance ${point.plottedPower}, ${value.label}`}
-                  onClick={() => activate(point)}
-                  onFocus={() => activate(point)}
-                  onMouseEnter={() => activate(point)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      activate(point)
-                    }
-                  }}
-                ><title>{`${point.title}\n${point.ramGb} GB · ${MONEY.format(point.plottedPrice)} advertised · work performance ${point.plottedPower}\n${value.label}`}</title></circle>
-              )
-            })}
-          </g>
-          <g className="baseline-label" aria-hidden="true">
-            {/* Sits below the baseline line: every qualifying listing scores at
-                least 100, so the band underneath is always empty, while the band
-                above is where the cheapest near-baseline machines plot. */}
-            <rect x={x(BASELINE_PRICE) + 8} y={baselineLabelY} width={compact ? 118 : 173} height="24" rx="2" />
-            <text x={x(BASELINE_PRICE) + 17} y={baselineLabelY + 16}>{compact ? 'YOUR G16 · £1,170' : 'YOUR G16 · £1,170 · 100'}</text>
-          </g>
-        </svg>
+        <>
+          <div className="chart-toolbar">
+            <p className="chart-hint">Scroll, pinch or use + / − to zoom · drag to pan · double-click to zoom in</p>
+            <div className="zoom-controls" role="group" aria-label="Zoom the chart">
+              <button type="button" onClick={() => zoomBy(1 / BUTTON_ZOOM)} disabled={!zoomed} aria-label="Zoom out" title="Zoom out (−)"><ZoomOut size={16} aria-hidden="true" /></button>
+              <button type="button" onClick={() => zoomBy(BUTTON_ZOOM)} disabled={view.span <= MIN_SPAN + 1e-9} aria-label="Zoom in" title="Zoom in (+)"><ZoomIn size={16} aria-hidden="true" /></button>
+              <span className="zoom-level" aria-live="polite">{zoomLevel(view).toFixed(1)}×</span>
+              <button type="button" className="zoom-reset" onClick={() => apply(FULL_VIEW)} disabled={!zoomed} title="Show everything (0)"><Maximize2 size={14} aria-hidden="true" />Reset</button>
+            </div>
+          </div>
+          <svg
+            ref={svgRef}
+            tabIndex={-1}
+            className={`power-chart${zoomed ? ' is-zoomed' : ''}${panning ? ' is-panning' : ''}`}
+            viewBox={`0 0 ${width} ${height}`}
+            role="img"
+            aria-labelledby={`${clipId}-title ${clipId}-desc`}
+            onPointerDown={beginGesture}
+            onPointerMove={moveGesture}
+            onPointerUp={endGesture}
+            onPointerCancel={endGesture}
+            onDoubleClick={(event) => {
+              const { rx, ry } = toPlot(event.clientX, event.clientY)
+              if (rx >= 0 && rx <= 1 && ry >= 0 && ry <= 1) apply(zoomView(viewRef.current, 2, rx, ry))
+            }}
+          >
+            <title id={`${clipId}-title`}>Advertised price versus backtesting work performance</title>
+            <desc id={`${clipId}-desc`}>{model.points.length} qualifying eBay listings compared with the current ASUS G16 at work performance 100 and £1,170. Zoom with the buttons, the scroll wheel or a pinch.</desc>
+            <defs>
+              <clipPath id={clipId}><rect x={pad.left} y={pad.top} width={innerWidth} height={innerHeight} /></clipPath>
+            </defs>
+            <g className="chart-grid" aria-hidden="true">
+              {xAxis.ticks.map((tick) => <line key={`x-${tick}`} x1={x(tick)} x2={x(tick)} y1={pad.top} y2={height - pad.bottom} />)}
+              {yAxis.ticks.map((tick) => <line key={`y-${tick}`} x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} />)}
+            </g>
+            <g className="chart-axes" aria-hidden="true">
+              {xAxis.ticks.map((tick) => <text key={tick} x={x(tick)} y={height - 26} textAnchor="middle">{priceTick(tick)}</text>)}
+              {yAxis.ticks.map((tick) => <text key={tick} x={pad.left - 14} y={y(tick) + 4} textAnchor="end">{tick}</text>)}
+              <text x={pad.left + innerWidth / 2} y={height - 4} textAnchor="middle" className="axis-title">ADVERTISED PRICE</text>
+              <text transform={`translate(${compact ? 11 : 17} ${pad.top + innerHeight / 2}) rotate(-90)`} textAnchor="middle" className="axis-title">{compact ? 'WORK PERFORMANCE' : 'BACKTESTING WORK PERFORMANCE'}</text>
+            </g>
+            <g clipPath={`url(#${clipId})`}>
+              <line className="baseline-line" x1={pad.left} x2={width - pad.right} y1={y(100)} y2={y(100)} />
+              <line className="baseline-price" x1={x(BASELINE_PRICE)} x2={x(BASELINE_PRICE)} y1={pad.top} y2={height - pad.bottom} />
+              <path className="equal-value-line" d={equalValuePath} />
+              {lineLabel && <text className="value-region-label" textAnchor="middle" transform={`translate(${lineLabel.cx} ${lineLabel.cy}) rotate(${lineLabel.angle}) translate(0 -8)`}>{lineLabel.text}</text>}
+              {frontier32Path && <path className="pareto-line tier-32" d={frontier32Path} />}
+              {frontierPath && <path className="pareto-line" d={frontierPath} />}
+              {drawOrder.map((point) => {
+                const opened = openedIds.has(point.id)
+                const value = assessValue(point.plottedPower, point.valuePrice)
+                const px = x(point.plottedPrice)
+                const py = y(point.plottedPower)
+                const extent = point.ramTier === 32 ? radius * DIAMOND_SCALE : radius
+                return (
+                  <g
+                    key={point.id}
+                    className="point"
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${point.title}, ${point.ramGb} GB, ${MONEY.format(point.plottedPrice)} advertised, work performance ${point.plottedPower}, ${value.label}, ${opened ? 'clicked' : 'not clicked yet'}`}
+                    onClick={() => { if (!justPanned.current) open(point) }}
+                    onFocus={(event) => {
+                      onSelect(point)
+                      if (event.currentTarget.matches(':focus-visible')) reveal(point)
+                    }}
+                    onMouseEnter={() => { if (!panning) onSelect(point) }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        open(point)
+                      }
+                    }}
+                  >
+                    {model.frontierIds.has(point.id) && <circle className={`halo-frontier tier-${point.ramTier}`} cx={px} cy={py} r={extent + 3.5} />}
+                    <Marker tier={point.ramTier} x={px} y={py} r={radius} opened={opened} />
+                    <title>{`${point.title}\n${point.ramGb} GB · ${MONEY.format(point.plottedPrice)} advertised · work performance ${point.plottedPower}\n${value.label}\n${opened ? 'Clicked' : 'Not clicked yet'}`}</title>
+                  </g>
+                )
+              })}
+              {selected && (
+                <g className="selected-overlay" aria-hidden="true">
+                  <circle className="halo-selected" cx={x(selected.plottedPrice)} cy={y(selected.plottedPower)} r={(selected.ramTier === 32 ? radius * DIAMOND_SCALE : radius) + 8} />
+                  <Marker tier={selected.ramTier} x={x(selected.plottedPrice)} y={y(selected.plottedPower)} r={radius + 1} opened={openedIds.has(selected.id)} extra=" is-selected" />
+                </g>
+              )}
+            </g>
+            {showBaselineLabel && (
+              <g className="baseline-label" aria-hidden="true">
+                {/* Sits below the baseline line: every qualifying listing scores at
+                    least 100, so the band underneath is always empty, while the band
+                    above is where the cheapest near-baseline machines plot. */}
+                <rect x={baselineLabelX} y={baselineLabelY} width={baselineLabelWidth} height="24" rx="2" />
+                <text x={baselineLabelX + 9} y={baselineLabelY + 16}>{compact ? 'YOUR G16 · £1,170' : 'YOUR G16 · £1,170 · 100'}</text>
+              </g>
+            )}
+          </svg>
+        </>
       )}
-      <div className="chart-legend" aria-hidden="true">
-        <span><i className="legend-dot tier-64" />64 GB</span>
-        <span><i className="legend-dot tier-32" />32 GB (hollow)</span>
-        <span><i className="legend-dot strong" />Strong value</span>
-        <span><i className="legend-dot competitive" />Competitive</span>
-        <span><i className="legend-dot weak" />Weak value</span>
-        <span><i className="legend-dot frontier" />Best-buy frontier</span>
-        <span><i className="legend-line" />Your G16 work performance</span>
-      </div>
+      <ChartKey model={model} opened={openedPlotted} onClear={onClearOpened} />
       <div className="chart-selection" aria-live="polite">
         {selected ? (
           <>
             <div><LiveBadge status={live.get(selected.id)} capturedAt={capturedAt} /><strong>{selected.title}</strong><span>{selected.cpuModel} · {selected.gpuModel} · {selected.ramGb} GB · {selected.condition}</span><small>Multi-core {signedPercent(selected.cpuMultiPower)} · single-thread {signedPercent(selected.cpuSinglePower)}</small><small>{buildRecommendationReason(selected, { minRamGb: selected.ramTier })}</small></div>
             <div className="selection-numbers"><strong>{MONEY.format(selected.plottedPrice)} advertised</strong>{selected.snapshotPrice != null && <span className="upgrade-total">{selected.plottedPrice < selected.snapshotPrice ? 'reduced' : 'raised'} from {MONEY.format(selected.snapshotPrice)}</span>}{selected.upgradeCost ? <span className="upgrade-total">≈ {MONEY.format(selected.plottedPrice + selected.upgradeCost)} with a 64 GB kit</span> : selected.upgradeCost === null ? <span className="upgrade-total">RAM soldered: stays {selected.ramGb} GB</span> : null}<span>work performance {signedPercent(selected.plottedPower)} · {assessValue(selected.plottedPower, selected.valuePrice).label}</span>{selected.surplusCredit > 0 && <small>value uses {MONEY.format(selected.valuePrice)} after {MONEY.format(selected.surplusCredit)} surplus RAM and storage credit</small>}</div>
-            <a href={selected.listingUrl} target="_blank" rel="noreferrer">View on eBay <ArrowUpRight size={14} /></a>
+            <a href={selected.listingUrl} target="_blank" rel="noreferrer" onClick={() => onOpen(selected.id)}>View on eBay <ArrowUpRight size={14} /></a>
           </>
-        ) : <span>Focus or hover a point to inspect it.</span>}
+        ) : <span>Hover or focus a point to inspect it; click or tap to mark it as clicked.</span>}
       </div>
     </div>
   )
@@ -422,6 +709,15 @@ function App() {
   const [sortMode, setSortMode] = useState<SortMode>('recommended')
   const [shortlist, setShortlist] = useState<Set<string>>(() => parseShortlist(localStorage.getItem(SHORTLIST_STORAGE_KEY)))
   const [tiers, setTiers] = useState<Set<RamTier>>(loadTiers)
+  // Dots whose listing has been clicked, tapped or opened on eBay. Remembered in
+  // this browser so a return visit shows what is new to you at a glance.
+  const [openedIds, setOpenedIds] = useState<Set<string>>(() => {
+    try {
+      return parseSeen(localStorage.getItem(SEEN_STORAGE_KEY))
+    } catch {
+      return new Set()
+    }
+  })
   const [drawer, setDrawer] = useState<DrawerName | null>(null)
   const [live, setLive] = useState<Map<string, LiveStatus>>(() => new Map())
   const [liveCheck, setLiveCheck] = useState<LiveCheck | null>(null)
@@ -461,6 +757,17 @@ function App() {
       // Remembering the toggle is a convenience only.
     }
   }, [tiers])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SEEN_STORAGE_KEY, serializeSeen(openedIds))
+    } catch {
+      // Remembering what was opened is a convenience only.
+    }
+  }, [openedIds])
+
+  const openListing = useCallback((id: string) => setOpenedIds((current) => markSeen(current, id)), [])
+  const clearOpened = useCallback(() => setOpenedIds(new Set()), [])
 
   const facets = useMemo(() => deriveFacets(dataset?.listings ?? []), [dataset])
   // Every listing that can be plotted at either RAM tier gets a live check
@@ -615,14 +922,14 @@ function App() {
               ))}
             </div>
           </div>
-          {tiers.has(32) && <p className="tier-note"><MemoryStick size={14} aria-hidden="true" />Hollow dots have 32 GB and pass every other floor. A 64 GB kit costs about {MONEY.format(RAM_UPGRADE_GBP)} today; tap a dot for the total.</p>}
+          {tiers.has(32) && <p className="tier-note"><MemoryStick size={14} aria-hidden="true" />Diamonds have 32 GB and pass every other floor. A 64 GB kit costs about {MONEY.format(RAM_UPGRADE_GBP)} today; tap a dot for the total.</p>}
           <p className={`live-note phase-${liveNote.phase}`}>
             <span className="live-dot" aria-hidden="true" />
             {liveNote.phase === 'checking' && <>Checking each laptop is still for sale on eBay… {liveNote.checked} of {liveNote.total}{liveNote.ended > 0 && ` · ${liveNote.ended} sold or ended, removed`}</>}
             {liveNote.phase === 'done' && <>Every dot checked live on eBay just now{liveNote.ended > 0 ? ` · ${liveNote.ended} sold or ended since the ${new Date(dataset.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} refresh, removed` : ' · all still for sale'}</>}
             {liveNote.phase === 'unavailable' && <>Live check unavailable — showing the snapshot from {ageLabel(dataset.generatedAt)}, so a dot may have sold since</>}
           </p>
-          <PowerChart model={chart} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} live={live} capturedAt={dataset.generatedAt} />
+          <PowerChart model={chart} selectedId={effectiveSelectedId} onSelect={(row) => setSelectedId(row.id)} onOpen={openListing} openedIds={openedIds} onClearOpened={clearOpened} live={live} capturedAt={dataset.generatedAt} />
         </section>
       </main>
 
