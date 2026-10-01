@@ -3,6 +3,9 @@ import type { GateOptions, RamTier } from './best-buy'
 import type { LaptopFilters, LaptopListing } from './types'
 
 export const SHORTLIST_STORAGE_KEY = 'laptop-power-finder-shortlist-v1'
+export const SEEN_STORAGE_KEY = 'laptop-power-finder-opened-v1'
+/** Enough for months of listings; the oldest ids fall off first so storage cannot grow without bound. */
+export const SEEN_LIMIT = 2000
 export const BASELINE_PRICE = G16_REFERENCE.advertisedPrice
 export const BASELINE_POWER = 100
 const NUMBER_FORMAT = new Intl.NumberFormat('en-GB')
@@ -17,7 +20,7 @@ export interface ValueAssessment {
   label: string
 }
 
-export function parseShortlist(value: string | null): Set<string> {
+function parseIdSet(value: string | null): Set<string> {
   if (!value) return new Set()
   try {
     const parsed: unknown = JSON.parse(value)
@@ -28,8 +31,30 @@ export function parseShortlist(value: string | null): Set<string> {
   }
 }
 
+export function parseShortlist(value: string | null): Set<string> {
+  return parseIdSet(value)
+}
+
 export function serializeShortlist(ids: Set<string>): string {
   return JSON.stringify([...ids].sort())
+}
+
+export function parseSeen(value: string | null): Set<string> {
+  return parseIdSet(value)
+}
+
+/** Kept in the order the listings were opened, so trimming drops the oldest. */
+export function serializeSeen(ids: Set<string>): string {
+  return JSON.stringify([...ids])
+}
+
+/** Record that a listing was opened. Returns the same set when nothing changes, so React can skip the render. */
+export function markSeen(ids: Set<string>, id: string): Set<string> {
+  if (ids.has(id)) return ids
+  const next = new Set(ids)
+  next.add(id)
+  while (next.size > SEEN_LIMIT) next.delete(next.values().next().value as string)
+  return next
 }
 
 export function toggleSelection(ids: Set<string>, id: string): Set<string> {

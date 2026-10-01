@@ -22,7 +22,7 @@
 }
 
 .brand-lockup, .header-tools, .data-status, .filter-heading, .brand-mark, .selection-numbers, .section-heading,
-.listing-kicker, .spec-strip, .listing-actions, .result-explainer, .sort-control, .chart-legend, .missing-line, .recommendation-line { display: flex; align-items: center; }
+.listing-kicker, .spec-strip, .listing-actions, .result-explainer, .sort-control, .missing-line, .recommendation-line { display: flex; align-items: center; }
 
 .brand-lockup { gap: 14px; }
 .brand-mark {
@@ -168,27 +168,33 @@ input[type='range']::-moz-range-thumb { width: 11px; height: 11px; border-radius
 .baseline-line { stroke: var(--thermal); stroke-width: 1.5; stroke-dasharray: 5 5; vector-effect: non-scaling-stroke; }
 .baseline-price { stroke: var(--thermal); stroke-width: 1; stroke-dasharray: 2 6; opacity: .55; vector-effect: non-scaling-stroke; }
 .equal-value-line { fill: none; stroke: #8796a1; stroke-width: 1.5; stroke-dasharray: 8 5; opacity: .75; vector-effect: non-scaling-stroke; }
-.value-region-label { fill: #15705b; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; }
+.value-region-label { fill: #15705b; font: 700 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
 .pareto-line { fill: none; stroke: var(--green); stroke-width: 2.5; opacity: .75; vector-effect: non-scaling-stroke; }
-.listing-point { fill: var(--cobalt); stroke: var(--paper); stroke-width: 2; opacity: .78; cursor: pointer; vector-effect: non-scaling-stroke; transition: opacity .15s, r .15s; }
-.listing-point.value-strong { fill: #0b9b78; }
-.listing-point.value-competitive { fill: #3367cf; }
-.listing-point.value-weak { fill: #9aa7b0; }
-.listing-point:hover, .listing-point:focus { opacity: 1; stroke: var(--carbon); }
-.listing-point.is-frontier { fill: var(--green); stroke: #d9fff4; stroke-width: 3; opacity: 1; }
-.listing-point.is-selected { fill: var(--thermal); stroke: var(--carbon); stroke-width: 3; opacity: 1; }
+/* One mark per laptop. Shape and hue say RAM (blue circle 64 GB, violet diamond 32 GB);
+   fill says whether it has been opened: solid is new to you, pale with a ring is opened.
+   Value is not colour-coded: nothing on eBay beats the G16, so every dot would be the same colour. */
+.power-chart:focus { outline: none; }
+.power-chart { user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+.power-chart.is-zoomed { touch-action: none; cursor: grab; }
+.power-chart.is-panning, .power-chart.is-panning .point { cursor: grabbing; }
+.point { cursor: pointer; }
+.listing-point { fill: var(--dot-fill); stroke: var(--dot-stroke); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.listing-point.tier-64.is-new { --dot-fill: var(--cobalt); --dot-stroke: #fff; }
+.listing-point.tier-64.is-opened { --dot-fill: #dce5fa; --dot-stroke: var(--cobalt); }
+.listing-point.tier-32.is-new { --dot-fill: var(--violet); --dot-stroke: #fff; }
+.listing-point.tier-32.is-opened { --dot-fill: #e9e0f9; --dot-stroke: var(--violet); }
+.point:hover .listing-point, .point:focus .listing-point { stroke: var(--carbon); }
+/* The browser's rectangular focus ring is dropped; keyboard focus gets a heavier outline on the mark itself. */
+.power-chart .point, .power-chart .point:focus, .power-chart .point:focus-visible { outline: none; }
+.power-chart .point:focus-visible .listing-point { stroke: var(--carbon); stroke-width: 3.5; }
+.halo-frontier { fill: none; stroke: var(--green); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.halo-frontier.tier-32 { stroke: var(--violet); }
+.selected-overlay { pointer-events: none; }
+.halo-selected { fill: rgba(241, 90, 53, .14); stroke: var(--thermal); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
 /* Never let the label swallow a hover or click meant for a listing dot. */
 .baseline-label { pointer-events: none; }
 .baseline-label rect { fill: var(--thermal); }
 .baseline-label text { fill: white; font: 600 9px 'IBM Plex Mono', monospace; letter-spacing: .04em; }
-.chart-legend { justify-content: flex-end; flex-wrap: wrap; gap: 15px; padding: 0 12px 10px; color: var(--muted); font-size: 9px; }
-.chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.legend-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cobalt); }
-.legend-dot.strong { background: #0b9b78; }
-.legend-dot.competitive { background: #3367cf; }
-.legend-dot.weak { background: #9aa7b0; }
-.legend-dot.frontier { background: var(--green); box-shadow: 0 0 0 2px #bce4d9; }
-.legend-line { width: 18px; height: 0; border-top: 2px dashed var(--thermal); }
 .chart-selection {
   min-height: 62px;
   display: grid;
@@ -322,7 +328,7 @@ footer { min-height: 46px; display: flex; justify-content: flex-end; gap: 24px; 
   .power-chart { width: 100%; }
   .chart-selection { grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
   .chart-selection a { grid-column: 1 / -1; }
-  .chart-legend { justify-content: flex-start; padding-left: 10px; }
+  .chart-key { padding-left: 10px; padding-right: 10px; }
   .results-toolbar { min-height: auto; display: grid; padding: 10px; }
   .result-tabs { min-height: 38px; gap: 12px; overflow-x: auto; }
   .sort-control { justify-self: end; }
@@ -349,21 +355,13 @@ footer { min-height: 46px; display: flex; justify-content: flex-end; gap: 24px; 
 .tier-button span { padding: 2px 6px; font: 500 10px 'IBM Plex Mono', monospace; background: #e4eaee; color: var(--muted); }
 .tier-button.is-active { color: white; background: var(--cobalt); }
 .tier-button.is-active span { color: var(--cobalt-deep); background: white; }
-.tier-button.tier-32.is-active { background: #7a4fd0; }
+.tier-button.tier-32.is-active { background: var(--violet); }
 .tier-button.tier-32.is-active span { color: #5b3f92; }
 .tier-note { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0 20px 10px; font-size: 11px; color: #4e5b65; }
-.tier-note svg { flex: 0 0 auto; color: #7a4fd0; }
+.tier-note svg { flex: 0 0 auto; color: var(--violet); }
 .chart-wrap { overflow-x: visible; }
 .power-chart { min-width: 0; }
-.listing-point.tier-32 { fill: var(--paper); stroke-width: 2.5; opacity: .95; }
-.listing-point.tier-32.value-strong { stroke: #0b9b78; }
-.listing-point.tier-32.value-competitive { stroke: #3367cf; }
-.listing-point.tier-32.value-weak { stroke: #9aa7b0; }
-.listing-point.tier-32.is-frontier { fill: #f1ebfb; stroke: #7a4fd0; stroke-width: 3; }
-.listing-point.tier-32.is-selected { fill: var(--thermal); stroke: var(--carbon); }
-.pareto-line.tier-32 { stroke: #7a4fd0; stroke-dasharray: 6 4; }
-.legend-dot.tier-64 { background: var(--carbon); }
-.legend-dot.tier-32 { background: transparent; border: 2px solid #7a4fd0; width: 9px; height: 9px; }
+.pareto-line.tier-32 { stroke: var(--violet); stroke-dasharray: 6 4; }
 .selection-numbers .upgrade-total { font: 700 12px 'Manrope', sans-serif; color: #5b3f92; }
 .chart-selection { font-size: 11px; }
 
@@ -410,3 +408,27 @@ footer { min-height: 46px; display: flex; justify-content: flex-end; gap: 24px; 
 .live-badge { display: inline-flex; align-items: center; gap: 4px; justify-self: start; padding: 2px 6px; font: 600 9px 'IBM Plex Mono', monospace; color: #6a7680; background: #e4eaee; }
 .live-badge.is-live { color: var(--green); background: #def1eb; }
 @media (max-width: 680px) { .live-note { padding: 0 12px 8px; font-size: 10px; } }
+
+/* Zoom controls and the chart key */
+.chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 0 4px 8px; }
+.chart-hint { margin: 0; font-size: 11px; color: var(--muted); }
+.zoom-controls { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.zoom-controls button { height: 32px; min-width: 32px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; color: var(--carbon); background: #fff; border: 1px solid var(--line-strong); cursor: pointer; font: 700 11px 'Manrope', sans-serif; }
+.zoom-controls button:hover:not(:disabled) { color: var(--cobalt); border-color: var(--cobalt); }
+.zoom-controls button:disabled { opacity: .4; cursor: default; }
+.zoom-level { min-width: 42px; text-align: center; font: 600 11px 'IBM Plex Mono', monospace; color: #2c3740; }
+
+.chart-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 26px; margin-top: 4px; padding: 10px 14px 12px; color: #33414b; font-size: 11px; border-top: 1px solid var(--line); }
+.key-group { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; }
+.key-title { font: 600 9px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.key-item { display: inline-flex; align-items: center; gap: 3px; }
+.key-mark { width: 22px; height: 22px; flex: 0 0 auto; overflow: visible; }
+.key-mark.is-wide { width: 34px; }
+.key-progress { display: flex; align-items: center; gap: 12px; margin-left: auto; color: var(--muted); }
+.key-progress strong { color: var(--carbon); }
+.key-progress button { padding: 0; color: var(--cobalt); background: none; border: 0; cursor: pointer; font-size: 11px; text-decoration: underline; }
+@media (max-width: 680px) {
+  .chart-hint { font-size: 10px; }
+  .zoom-controls { width: 100%; justify-content: flex-end; }
+  .key-progress { margin-left: 0; width: 100%; }
+}
