@@ -2,14 +2,16 @@ name: Laptop best-buy alerts
 
 on:
   workflow_dispatch:
-  schedule:
-    # The eBay Browse quota resets at 07:00 UTC, which is 08:00 Europe/London in
-    # summer. Starting exactly on that boundary raced the reset, so both the
-    # morning and evening runs sit clear of it.
-    - cron: '30 8 * * *'
-      timezone: 'Europe/London'
-    - cron: '30 20 * * *'
-      timezone: 'Europe/London'
+  # Scheduled runs are paused (laptop bought, 4 October 2026). To resume the
+  # twice-daily scrape and Telegram digests, uncomment the block below.
+  # schedule:
+  #   # The eBay Browse quota resets at 07:00 UTC, which is 08:00 Europe/London in
+  #   # summer. Starting exactly on that boundary raced the reset, so both the
+  #   # morning and evening runs sit clear of it.
+  #   - cron: '30 8 * * *'
+  #     timezone: 'Europe/London'
+  #   - cron: '30 20 * * *'
+  #     timezone: 'Europe/London'
 
 concurrency:
   group: laptop-best-buy-alerts
