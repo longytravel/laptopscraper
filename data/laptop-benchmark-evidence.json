@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "refreshedAt": "2026-10-03T22:21:15.069Z",
+  "refreshedAt": "2026-10-04T13:22:18.132Z",
   "records": {
     "cpu:Intel Core i9-14900HX": {
       "kind": "cpu",
@@ -547,12 +547,12 @@
     "gpu:NVIDIA RTX 4000 Ada Laptop GPU": {
       "kind": "gpu",
       "canonical": "NVIDIA RTX 4000 Ada Laptop GPU",
-      "graphicsScore": 21966,
+      "graphicsScore": 21952,
       "sourceName": "PassMark",
       "sourceUrl": "https://www.videocardbenchmark.net/video_lookup.php?gpu=RTX%204000%20Ada%20Generation%20Laptop%20GPU&id=4819",
-      "observedAt": "2026-09-23",
-      "retrievedAt": "2026-09-23T12:51:48.197Z",
-      "sampleCount": 470,
+      "observedAt": "2026-10-04",
+      "retrievedAt": "2026-10-04T13:22:18.132Z",
+      "sampleCount": 473,
       "status": "validated",
       "providerVersion": "passmark-html-v2"
     },
